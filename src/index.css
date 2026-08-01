@@ -1,0 +1,55 @@
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@500;600;700&display=swap');
+
+@theme {
+  --font-sans: 'Inter', sans-serif;
+  --font-heading: 'Poppins', sans-serif;
+  
+  --color-primary: #7B3FF2;
+  --color-primary-dark: #5A2DD8;
+  --color-primary-light: #F3EEFF;
+  
+  --color-accent: #FF7A00;
+  --color-accent-hover: #FF8F1F;
+  --color-accent-light: #FFF3E8;
+
+  --color-bg-dark: #0D0D12;
+  --color-bg-dark-secondary: #151520;
+  --color-text-dark: #FFFFFF;
+  --color-text-dark-secondary: #B8B8C7;
+  --color-border-dark: rgba(255, 255, 255, 0.08);
+
+  --color-bg-light: #F8F9FC;
+  --color-bg-light-card: #FFFFFF;
+  --color-sidebar-light: #111111;
+  
+  --radius-xl: 20px;
+}
+
+@layer base {
+  body {
+    @apply font-sans antialiased bg-bg-light text-sidebar-light;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-heading;
+  }
+  
+  .dark-theme {
+    @apply bg-bg-dark text-text-dark;
+  }
+  
+  .glass-card {
+    background: rgba(21, 21, 32, 0.6);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--color-border-dark);
+  }
+  
+  .glass-card-light {
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+  }
+}

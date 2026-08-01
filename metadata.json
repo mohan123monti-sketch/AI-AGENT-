@@ -1,0 +1,8 @@
+{
+  "name": "PlanAI",
+  "description": "An intelligent productivity platform that acts as a personal AI productivity assistant.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
