@@ -70,30 +70,61 @@ export default function DashboardLayout() {
           <NavLink 
             to="/dashboard/settings" 
             className={({ isActive }) => 
-              `flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all font-medium text-sm w-full text-left
+              `flex items-center gap-3 px-3 py-2 rounded-xl transition-all font-medium text-sm w-full text-left
               ${isActive ? 'bg-[#7B3FF2]/10 text-white font-semibold' : 'hover:bg-white/5 hover:text-white'}`
             }
           >
             {({ isActive }) => (
               <>
-                <SettingsIcon className={isActive ? "w-5 h-5 text-[#7B3FF2]" : "w-5 h-5 text-gray-400"} />
+                <SettingsIcon className={isActive ? "w-4 h-4 text-[#7B3FF2]" : "w-4 h-4 text-gray-400"} />
                 Settings
               </>
             )}
           </NavLink>
-          <Link to="/login" className="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all font-medium text-sm hover:bg-white/5 hover:text-red-400 w-full text-left">
-            <LogOut className="w-5 h-5 text-gray-400" />
+          <Link to="/login" className="flex items-center gap-3 px-3 py-2 rounded-xl transition-all font-medium text-sm hover:bg-white/5 hover:text-red-400 w-full text-left">
+            <LogOut className="w-4 h-4 text-gray-400" />
             Logout
           </Link>
+
+          {/* User Profile Card at Sidebar Bottom */}
+          <div className="pt-3 mt-2 border-t border-white/5">
+            <div className="bg-[#1A1A1A] border border-white/5 rounded-2xl p-2.5 flex items-center justify-between">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#7B3FF2] to-[#FF7A00] p-[1.5px] shrink-0">
+                  <div className="w-full h-full rounded-full bg-gray-900 overflow-hidden">
+                    <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=PlanAI&backgroundColor=b6e3f4" alt="Alex Morgan" className="w-full h-full object-cover" />
+                  </div>
+                </div>
+                <div className="min-w-0">
+                  <h5 className="text-xs font-bold text-white truncate">Alex Morgan</h5>
+                  <p className="text-[10px] text-gray-400 truncate">alex@planai.com</p>
+                </div>
+              </div>
+              <span className="text-gray-400 text-xs cursor-pointer hover:text-white px-1">^</span>
+            </div>
+          </div>
         </div>
       </aside>
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col h-full min-w-0 bg-[#F8F9FC] relative">
         {/* Top Header */}
-        <header className="h-20 bg-white border-b border-gray-100 flex items-center justify-end px-8 flex-shrink-0 z-10 sticky top-0">
-          <div className="flex items-center gap-4">
+        <header className="h-20 bg-white border-b border-gray-100 flex items-center justify-between px-8 flex-shrink-0 z-10 sticky top-0">
+          {/* Top Search Input */}
+          <div className="flex-1 max-w-lg">
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+              </span>
+              <input 
+                type="text" 
+                placeholder="Search emails, senders, or summaries..." 
+                className="w-full pl-11 pr-4 py-2.5 bg-[#F8F9FC] border border-gray-100 rounded-full text-xs text-gray-700 placeholder:text-gray-400 focus:outline-none focus:bg-white focus:border-[#7B3FF2]/40 focus:ring-2 focus:ring-[#7B3FF2]/10 transition-all"
+              />
+            </div>
+          </div>
 
+          <div className="flex items-center gap-4">
             {/* Notifications Bell */}
             <div className="relative">
               <button 
