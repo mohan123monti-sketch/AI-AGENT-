@@ -1,179 +1,214 @@
 import { motion } from 'motion/react';
+import { Link, useNavigate } from 'react-router-dom';
 import { 
-  CheckSquare, Calendar, Mail, 
-  Clock, Bell, Plus, Play, MoreHorizontal, ArrowRight
+  CheckSquare, Mail, Calendar, 
+  Clock, Plus, ArrowRight, BarChart2, Sparkles, X, CheckCircle, Zap
 } from 'lucide-react';
 
 export default function DashboardHome() {
-  const stats = [
-    { label: "Productivity Score", value: "92%", change: "+4%", isPositive: true },
-    { label: "Focus Hours", value: "14h", change: "+2h", isPositive: true },
-    { label: "Task Completion", value: "24/28", change: "85%", isPositive: true }
-  ];
+  const navigate = useNavigate();
 
   return (
-    <div className="max-w-6xl mx-auto">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+    <div className="max-w-7xl mx-auto">
+      {/* Top Header */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
         <div>
-          <h1 className="text-2xl font-heading font-bold text-gray-900">Good morning, Alex!</h1>
-          <p className="text-gray-500 text-sm mt-1">Here is your AI-optimized plan for today.</p>
+          <h1 className="text-2xl font-heading font-bold text-gray-900 flex items-center gap-2">
+            Good morning, Alex! 👋
+          </h1>
+          <p className="text-gray-500 text-xs mt-1 font-medium">
+            Saturday, Aug 1 • You have 7 tasks and 2 meetings today.
+          </p>
         </div>
         
         <div className="flex items-center gap-3">
-          <button className="flex items-center gap-2 bg-white border border-gray-200 text-gray-700 px-4 py-2 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors shadow-sm">
-            <Play className="w-4 h-4 text-[#7B3FF2]" />
-            Start Focus Session
-          </button>
-          <button className="flex items-center gap-2 bg-[#FF7A00] text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-[#FF8F1F] transition-all shadow-sm">
+          <button 
+            onClick={() => navigate('/dashboard/tasks')}
+            className="flex items-center gap-2 bg-[#FF7A00] text-white px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-[#FF8F1F] transition-all shadow-[0_4px_14px_rgba(255,122,0,0.2)] cursor-pointer"
+          >
             <Plus className="w-4 h-4" />
             New Task
           </button>
         </div>
       </div>
 
-      {/* Stats row */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        {stats.map((stat, i) => (
-          <motion.div 
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.1 }}
-            key={i} 
-            className="bg-white rounded-2xl p-6 border border-gray-100 shadow-[0_2px_10px_rgba(0,0,0,0.02)]"
-          >
-            <div className="text-gray-500 text-sm font-medium mb-2">{stat.label}</div>
-            <div className="flex items-end gap-3">
-              <div className="text-3xl font-heading font-bold text-gray-900">{stat.value}</div>
-              <div className={`text-xs font-medium mb-1 px-2 py-0.5 rounded-md ${stat.isPositive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                {stat.change}
-              </div>
-            </div>
-          </motion.div>
-        ))}
+      {/* AI Insight Banner */}
+      <div className="bg-[#F3EEFF]/80 border border-[#7B3FF2]/20 rounded-2xl p-4 mb-6 flex items-center justify-between shadow-xs">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-[#7B3FF2] text-white flex items-center justify-center flex-shrink-0 shadow-xs">
+            <Sparkles className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h4 className="font-heading font-bold text-sm text-gray-900">AI Insight</h4>
+            <p className="text-xs text-gray-700 font-medium leading-snug">
+              You have a 3-hour focus window before your next meeting.<br className="hidden sm:inline" /> Finish "Q3 Marketing Deck" first to maximize your deep work time.
+            </p>
+          </div>
+        </div>
+        <button className="text-gray-400 hover:text-gray-600 p-1 cursor-pointer">
+          <X className="w-4 h-4" />
+        </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left Column - Main Timeline */}
-        <div className="lg:col-span-2 space-y-8">
-          {/* AI Suggestions Card */}
-          <div className="bg-gradient-to-br from-[#7B3FF2] to-[#5A2DD8] rounded-2xl p-6 text-white relative overflow-hidden shadow-lg">
-            <div className="absolute right-0 top-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
-            <div className="relative z-10">
-              <div className="flex items-center gap-2 mb-3">
-                <span className="w-2 h-2 rounded-full bg-white animate-pulse"></span>
-                <h3 className="font-medium text-sm text-white/90">AI Suggestion</h3>
-              </div>
-              <p className="text-lg font-medium leading-relaxed mb-4 max-w-lg">
-                You have a solid 3-hour block before your next meeting. I recommend prioritizing the "Q3 Marketing Deck" to maximize your deep focus time.
-              </p>
-              <div className="flex gap-3">
-                <button className="bg-white text-[#7B3FF2] px-4 py-2 rounded-xl text-sm font-semibold hover:bg-gray-50 transition-colors shadow-sm">
-                  Accept Suggestion
-                </button>
-                <button className="bg-white/20 text-white border border-white/20 px-4 py-2 rounded-xl text-sm font-medium hover:bg-white/30 transition-colors">
-                  Ask AI to Reschedule
-                </button>
-              </div>
-            </div>
+      {/* Two-Column Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-8">
+        
+        {/* Left Column: Today's Optimized Plan (7 cols) */}
+        <div className="lg:col-span-7 bg-white rounded-2xl border border-gray-100 p-6 shadow-xs">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="font-heading font-bold text-gray-900 flex items-center gap-2 text-base">
+              <Calendar className="w-5 h-5 text-[#7B3FF2]" />
+              Today's Optimized Plan
+            </h3>
+            <Link to="/dashboard/planner" className="text-[#7B3FF2] text-xs font-semibold hover:underline flex items-center gap-1">
+              View full calendar <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
           </div>
 
-          {/* Today's Plan */}
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_10px_rgba(0,0,0,0.02)] p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="font-heading font-semibold text-lg text-gray-900">Today's Optimized Plan</h3>
-              <button className="text-[#7B3FF2] text-sm font-medium hover:underline flex items-center gap-1">
-                View full calendar <ArrowRight className="w-4 h-4" />
-              </button>
+          <div className="relative pl-2 space-y-4">
+            {/* Timeline Line */}
+            <div className="absolute left-[78px] top-4 bottom-4 w-[2px] bg-gray-200"></div>
+
+            {[
+              { time: "09:00 AM", title: "Daily Sync with Engineering", duration: "30 min", color: "bg-[#7B3FF2]", cardBg: "bg-[#F3EEFF]/40 border-gray-100" },
+              { time: "09:30 AM", title: "Deep Focus: Q3 Marketing Deck", duration: "2h", color: "bg-[#7B3FF2]", cardBg: "bg-[#F3EEFF]/70 border-[#7B3FF2]/20 font-semibold" },
+              { time: "11:30 AM", title: "Client Meeting", duration: "1h", color: "bg-[#FF7A00]", cardBg: "bg-[#FFF3E8]/80 border-[#FF7A00]/20" },
+              { time: "01:00 PM", title: "Lunch Break", duration: "1h", color: "bg-[#7B3FF2]", cardBg: "bg-gray-50/80 border-gray-100" },
+              { time: "02:00 PM", title: "Review Campaign Analytics", duration: "1.5h", color: "bg-[#7B3FF2]", cardBg: "bg-[#F3EEFF]/40 border-gray-100" },
+              { time: "04:00 PM", title: "Team Standup", duration: "30 min", color: "bg-[#7B3FF2]", cardBg: "bg-[#F3EEFF]/40 border-gray-100" },
+            ].map((item, idx) => (
+              <div key={idx} className="flex items-center gap-4 relative group">
+                <span className="w-16 text-right text-xs font-bold text-gray-500 flex-shrink-0">{item.time}</span>
+                
+                {/* Timeline Dot */}
+                <div className={`w-2.5 h-2.5 rounded-full ${item.color} z-10 flex-shrink-0 ring-4 ring-white`}></div>
+
+                <div className={`flex-1 p-3.5 rounded-xl border ${item.cardBg} transition-all`}>
+                  <h4 className="text-xs font-bold text-gray-900">{item.title}</h4>
+                  <span className="text-[11px] font-medium text-gray-500 flex items-center gap-1 mt-0.5">
+                    <Clock className="w-3 h-3" /> {item.duration}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Right Column: Email Summary & Must Do Today (5 cols) */}
+        <div className="lg:col-span-5 space-y-6">
+          {/* Email Summary Card */}
+          <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-xs">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-heading font-bold text-gray-900 flex items-center gap-2 text-base">
+                <Mail className="w-5 h-5 text-[#7B3FF2]" />
+                Email Summary
+              </h3>
+              <Link to="/dashboard/email" className="text-[#7B3FF2] text-xs font-semibold hover:underline flex items-center gap-1">
+                View all emails <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
             </div>
-            
-            <div className="space-y-6">
+
+            <div className="space-y-3">
               {[
-                { time: "09:00 AM", title: "Daily Sync with Engineering", type: "meeting", duration: "30 min", color: "bg-blue-500" },
-                { time: "09:30 AM", title: "Deep Focus: Q3 Marketing Deck", type: "focus", duration: "2h", color: "bg-[#7B3FF2]" },
-                { time: "11:30 AM", title: "Quick Break & Email Catchup", type: "break", duration: "30 min", color: "bg-gray-400" },
-                { time: "12:00 PM", title: "Lunch", type: "break", duration: "1h", color: "bg-gray-400" },
-                { time: "01:00 PM", title: "Client Review: Acme Corp", type: "meeting", duration: "1h", color: "bg-blue-500" },
-                { time: "02:00 PM", title: "Review PRs & Code", type: "task", duration: "1.5h", color: "bg-[#FF7A00]" },
-              ].map((item, i) => (
-                <div key={i} className="flex gap-4 group">
-                  <div className="w-20 text-right pt-1">
-                    <span className="text-sm font-medium text-gray-500">{item.time}</span>
+                { avatar: "S", avatarBg: "bg-red-100 text-red-600", sender: "Sarah", subject: "Q3 Roadmap", text: "Need roadmap updates before 5 PM.", priority: "HIGH", priorityBg: "bg-red-100 text-red-600", time: "4:30 PM" },
+                { avatar: "D", avatarBg: "bg-orange-100 text-orange-600", sender: "David Chen", subject: "Design Sync Notes", text: "New logo variations approved, prepare...", priority: "MEDIUM", priorityBg: "bg-orange-100 text-orange-600", time: "2:15 PM" },
+                { avatar: "M", avatarBg: "bg-blue-100 text-blue-600", sender: "Marketing Team", subject: "Weekly Newsletter Draft", text: "Draft for newsletter is ready for review.", priority: "LOW", priorityBg: "bg-blue-100 text-blue-600", time: "10:20 AM" },
+              ].map((email, idx) => (
+                <div 
+                  key={idx} 
+                  onClick={() => navigate('/dashboard/email')} 
+                  className="p-3 bg-gray-50/60 hover:bg-[#F3EEFF]/30 rounded-xl border border-gray-100 transition-colors cursor-pointer flex items-start gap-3"
+                >
+                  <div className={`w-8 h-8 rounded-full ${email.avatarBg} flex items-center justify-center font-bold text-xs flex-shrink-0 mt-0.5`}>
+                    {email.avatar}
                   </div>
-                  <div className="relative flex-1 bg-gray-50 rounded-xl p-4 border border-gray-100 hover:border-gray-200 transition-colors">
-                    <div className={`absolute left-0 top-0 bottom-0 w-1 rounded-l-xl ${item.color}`}></div>
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h4 className="font-medium text-gray-900">{item.title}</h4>
-                        <div className="flex items-center gap-2 mt-2 text-xs text-gray-500 font-medium">
-                          <Clock className="w-3.5 h-3.5" />
-                          {item.duration}
-                        </div>
-                      </div>
-                      <button className="text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-gray-200 rounded">
-                        <MoreHorizontal className="w-4 h-4" />
-                      </button>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-xs font-bold text-gray-900">{email.sender}</h4>
+                      <span className={`text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded ${email.priorityBg}`}>
+                        {email.priority}
+                      </span>
                     </div>
+                    <p className="text-xs font-semibold text-gray-800 truncate">{email.subject}</p>
+                    <p className="text-[11px] text-gray-500 truncate">{email.text}</p>
                   </div>
+                  <span className="text-[10px] text-gray-400 font-medium flex-shrink-0">{email.time}</span>
                 </div>
               ))}
             </div>
           </div>
-        </div>
 
-        {/* Right Column - Secondary Widgets */}
-        <div className="space-y-6">
-          {/* Recent Emails Summary */}
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_10px_rgba(0,0,0,0.02)] p-6">
+          {/* Must Do Today Card */}
+          <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-xs">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-heading font-semibold text-gray-900 flex items-center gap-2">
-                <Mail className="w-5 h-5 text-[#7B3FF2]" />
-                Inbox Summary
-              </h3>
-            </div>
-            <div className="space-y-4">
-              <div className="p-3 bg-[#FFF3E8] rounded-xl border border-[#FF7A00]/20">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="w-2 h-2 rounded-full bg-[#FF7A00]"></span>
-                  <span className="text-xs font-bold text-[#FF7A00] uppercase tracking-wider">Action Required</span>
-                </div>
-                <p className="text-sm text-gray-800 font-medium line-clamp-2">Sarah requested updates on the Q3 roadmap by EOD today.</p>
-              </div>
-              <div className="p-3 bg-gray-50 rounded-xl border border-gray-100">
-                <span className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 block">FYI</span>
-                <p className="text-sm text-gray-700 line-clamp-2">Weekly design sync notes are available. No action needed.</p>
-              </div>
-              <button className="w-full py-2 text-sm font-medium text-[#7B3FF2] hover:bg-[#F3EEFF] rounded-lg transition-colors">
-                View all emails
-              </button>
-            </div>
-          </div>
-
-          {/* Today's Top Priority Tasks */}
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_10px_rgba(0,0,0,0.02)] p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-heading font-semibold text-gray-900 flex items-center gap-2">
+              <h3 className="font-heading font-bold text-gray-900 flex items-center gap-2 text-base">
                 <CheckSquare className="w-5 h-5 text-[#FF7A00]" />
                 Must Do Today
               </h3>
             </div>
+
             <div className="space-y-3">
               {[
-                { title: "Finalize Marketing Deck", priority: "High" },
-                { title: "Approve budget request", priority: "High" },
-                { title: "Review candidate profiles", priority: "Med" },
-              ].map((task, i) => (
-                <div key={i} className="flex items-start gap-3 p-3 hover:bg-gray-50 rounded-xl transition-colors border border-transparent hover:border-gray-100 cursor-pointer">
-                  <input type="checkbox" className="mt-1 w-4 h-4 rounded border-gray-300 text-[#7B3FF2] focus:ring-[#7B3FF2] cursor-pointer" />
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">{task.title}</p>
-                    <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${task.priority === 'High' ? 'bg-red-100 text-red-600' : 'bg-orange-100 text-orange-600'}`}>
-                      {task.priority} Priority
-                    </span>
-                  </div>
+                { title: "Finalize Marketing Deck", priority: "HIGH", priorityBg: "bg-red-100 text-red-600" },
+                { title: "Approve budget request", priority: "HIGH", priorityBg: "bg-red-100 text-red-600" },
+                { title: "Review candidate profiles", priority: "MEDIUM", priorityBg: "bg-orange-100 text-orange-600" },
+              ].map((task, idx) => (
+                <div key={idx} onClick={() => navigate('/dashboard/tasks')} className="flex items-center justify-between p-2 rounded-xl hover:bg-gray-50 cursor-pointer transition-colors">
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input type="checkbox" className="w-4 h-4 rounded border-gray-300 text-[#7B3FF2] focus:ring-[#7B3FF2]" />
+                    <span className="text-xs font-bold text-gray-800">{task.title}</span>
+                  </label>
+                  <span className={`text-[9px] font-extrabold uppercase px-2 py-0.5 rounded ${task.priorityBg}`}>
+                    {task.priority}
+                  </span>
                 </div>
               ))}
             </div>
+
+            <button 
+              onClick={() => navigate('/dashboard/tasks')}
+              className="mt-3 text-xs font-bold text-[#7B3FF2] hover:underline cursor-pointer"
+            >
+              +4 remaining tasks
+            </button>
           </div>
+        </div>
+      </div>
+
+      {/* Bottom Section: Analytics Shortcut */}
+      <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-xs">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="font-heading font-bold text-gray-900 flex items-center gap-2 text-base">
+            <BarChart2 className="w-5 h-5 text-[#7B3FF2]" />
+            Analytics Shortcut
+          </h3>
+          <Link to="/dashboard/analytics" className="text-[#7B3FF2] text-xs font-semibold hover:underline flex items-center gap-1">
+            View detailed analytics <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[
+            { icon: <Clock className="w-5 h-5 text-[#7B3FF2]" />, iconBg: "bg-[#F3EEFF]", label: "Focus Time", value: "4.2h", change: "+8% from yesterday" },
+            { icon: <CheckCircle className="w-5 h-5 text-[#7B3FF2]" />, iconBg: "bg-[#F3EEFF]", label: "Tasks Completed", value: "12", change: "+3 from yesterday" },
+            { icon: <Mail className="w-5 h-5 text-[#7B3FF2]" />, iconBg: "bg-[#F3EEFF]", label: "Emails Cleared", value: "15", change: "+5 from yesterday" },
+            { icon: <Zap className="w-5 h-5 text-[#7B3FF2]" />, iconBg: "bg-[#F3EEFF]", label: "Productivity Score", value: "86%", change: "+6% from yesterday" },
+          ].map((stat, idx) => (
+            <div 
+              key={idx} 
+              onClick={() => navigate('/dashboard/analytics')} 
+              className="bg-gray-50/60 hover:bg-[#F3EEFF]/30 p-4 rounded-2xl border border-gray-100 transition-all cursor-pointer flex items-center gap-4"
+            >
+              <div className={`w-11 h-11 rounded-xl ${stat.iconBg} flex items-center justify-center flex-shrink-0`}>
+                {stat.icon}
+              </div>
+              <div>
+                <span className="text-xs font-bold text-gray-500">{stat.label}</span>
+                <h4 className="text-xl font-heading font-extrabold text-gray-900">{stat.value}</h4>
+                <span className="text-[11px] font-semibold text-green-600">{stat.change}</span>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </div>

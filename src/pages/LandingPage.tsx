@@ -62,11 +62,10 @@ export default function LandingPage() {
           <div className="hidden md:flex items-center gap-8 text-sm font-medium text-[#B8B8C7]">
             <a href="#features" className="hover:text-white transition-colors">Features</a>
             <a href="#how-it-works" className="hover:text-white transition-colors">How it works</a>
-            <a href="#testimonials" className="hover:text-white transition-colors">Testimonials</a>
           </div>
           <div className="flex items-center gap-4">
             <Link to="/login" className="text-sm font-medium hover:text-[#B8B8C7] transition-colors">Log in</Link>
-            <Link to="/dashboard" className="bg-[#7B3FF2] hover:bg-[#5A2DD8] text-white px-5 py-2.5 rounded-full text-sm font-medium transition-all shadow-[0_0_20px_rgba(123,63,242,0.3)] hover:shadow-[0_0_30px_rgba(123,63,242,0.5)]">
+            <Link to="/login" className="bg-[#7B3FF2] hover:bg-[#5A2DD8] text-white px-5 py-2.5 rounded-full text-sm font-medium transition-all shadow-[0_0_20px_rgba(123,63,242,0.3)] hover:shadow-[0_0_30px_rgba(123,63,242,0.5)]">
               Get Started
             </Link>
           </div>
@@ -100,12 +99,9 @@ export default function LandingPage() {
             </p>
             
             <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4">
-              <Link to="/dashboard" className="w-full sm:w-auto bg-[#FF7A00] hover:bg-[#FF8F1F] text-white px-8 py-4 rounded-full text-base font-semibold transition-all flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(255,122,0,0.3)] hover:shadow-[0_0_30px_rgba(255,122,0,0.5)]">
+              <Link to="/login" className="w-full sm:w-auto bg-[#FF7A00] hover:bg-[#FF8F1F] text-white px-8 py-4 rounded-full text-base font-semibold transition-all flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(255,122,0,0.3)] hover:shadow-[0_0_30px_rgba(255,122,0,0.5)]">
                 Get Started Free <ArrowRight className="w-5 h-5" />
               </Link>
-              <button className="w-full sm:w-auto px-8 py-4 rounded-full text-base font-semibold border border-[rgba(255,255,255,0.2)] hover:bg-[rgba(255,255,255,0.05)] transition-colors flex items-center justify-center gap-2">
-                Watch Demo
-              </button>
             </div>
           </motion.div>
 
