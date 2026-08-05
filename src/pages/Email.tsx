@@ -64,11 +64,117 @@ export default function Email() {
     localStorage.setItem(EMAIL_STORAGE_KEY, JSON.stringify(emails));
   }, [emails]);
 
+  // ── Helper to extract email arrays from nested webhook response structures ─
+  const extractEmailArray = (data: unknown): Record<string, unknown>[] => {
+    if (!data) return [];
+    if (Array.isArray(data)) {
+      return data.filter(item => item && typeof item === 'object') as Record<string, unknown>[];
+    }
+    if (typeof data === 'object' && data !== null) {
+      const obj = data as Record<string, unknown>;
+      const keys = ['output', 'response', 'data', 'items', 'emails', 'result', 'messages', 'json'];
+      for (const key of keys) {
+        if (Array.isArray(obj[key])) {
+          return (obj[key] as unknown[]).filter(item => item && typeof item === 'object') as Record<string, unknown>[];
+        }
+      }
+      if (obj.sender || obj.from || obj.subject || obj.body || obj.snippet) {
+        return [obj];
+      }
+    }
+    return [];
+  };
+
+  // ── Helper to normalize raw webhook email items into EmailItem interface ────
+  const normalizeEmailItem = (raw: Record<string, unknown>, index: number): EmailItem => {
+    const id = Number(raw.id) || index + 1;
+
+    let sender = String(raw.sender || raw.from || raw.fromAddress || raw.author || raw.name || 'Unknown Sender');
+    let emailAddr = String(raw.emailAddr || raw.email || raw.fromEmail || raw.address || '');
+
+    if (sender.includes('<') && sender.includes('>')) {
+      const match = sender.match(/(.*?)\s*<(.*?)>/);
+      if (match) {
+        sender = match[1].trim() || 'Sender';
+        emailAddr = emailAddr || match[2].trim();
+      }
+    }
+    if (!emailAddr) {
+      emailAddr = `${sender.toLowerCase().replace(/[^a-z0-9]/g, '')}@gmail.com`;
+    }
+
+    const initial = sender.charAt(0).toUpperCase() || 'E';
+    const subject = String(raw.subject || raw.title || raw.header || 'No Subject');
+    const body = String(raw.body || raw.text || raw.content || raw.message || raw.description || raw.snippet || '');
+    const summary = String(raw.summary || raw.preview || raw.snippet || (body ? body.slice(0, 150) + '...' : 'No summary available.'));
+    const preview = String(raw.preview || (summary ? summary.slice(0, 100) : ''));
+
+    let time = String(raw.time || raw.date || raw.timestamp || raw.created_at || 'Just now');
+    if (raw.internalDate) {
+      try {
+        time = new Date(Number(raw.internalDate)).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      } catch {
+        // keep fallback
+      }
+    }
+
+    const rawPriority = String(raw.priority || raw.importance || 'MEDIUM').toUpperCase();
+    const priority = rawPriority.includes('HIGH') ? 'HIGH' : rawPriority.includes('LOW') ? 'LOW' : 'MEDIUM';
+
+    let actionItems: string[] = [];
+    if (Array.isArray(raw.actionItems)) {
+      actionItems = raw.actionItems.map(String);
+    } else if (Array.isArray(raw.action_items)) {
+      actionItems = raw.action_items.map(String);
+    } else if (typeof raw.actionItems === 'string') {
+      actionItems = [raw.actionItems];
+    }
+
+    const suggestedReply = String(
+      raw.suggestedReply || raw.suggested_reply || raw.reply || raw.response || 
+      `Hi ${sender.split(' ')[0]},\n\nThank you for reaching out. I have received your email regarding "${subject}" and will follow up shortly.\n\nBest regards,`
+    );
+
+    const colors = [
+      'bg-[#7B3FF2] text-white',
+      'bg-blue-600 text-white',
+      'bg-emerald-600 text-white',
+      'bg-amber-500 text-white',
+      'bg-indigo-600 text-white',
+      'bg-purple-600 text-white',
+    ];
+    const avatarBg = colors[index % colors.length];
+
+    return {
+      id,
+      sender,
+      emailAddr,
+      initial,
+      avatarBg,
+      subject,
+      time,
+      fullTime: String(raw.fullTime || raw.date || time),
+      preview,
+      summary,
+      body: body || summary,
+      actionItems: actionItems.length > 0 ? actionItems : undefined,
+      followUpItem: raw.followUpItem ? String(raw.followUpItem) : undefined,
+      deadline: raw.deadline ? String(raw.deadline) : undefined,
+      priority,
+      actionRequired: Boolean(raw.actionRequired ?? raw.action_required ?? (actionItems.length > 0)),
+      archived: Boolean(raw.archived),
+      read: Boolean(raw.read),
+      suggestedReply,
+    };
+  };
+
   // ── Load real emails from the workflow on mount ──────────────────────────
   const handleFetchEmails = async () => {
     setIsLoadingEmails(true);
     const res = await emailApi.fetchEmails(100);
     setIsLoadingEmails(false);
+
+    console.log('📬 Webhook Email API Response:', res);
 
     if (res.underConstruction) {
       setApiStatus('under-construction');
@@ -78,16 +184,15 @@ export default function Email() {
 
     if (res.success && res.data) {
       setApiStatus('loaded');
-      const payload = res.data as { emails?: EmailItem[]; data?: EmailItem[]; result?: EmailItem[] } | EmailItem[];
-      const fetchedList = Array.isArray(payload) 
-        ? payload 
-        : (payload.emails || payload.data || payload.result || []);
+      const rawList = extractEmailArray(res.data);
       
-      if (fetchedList.length > 0) {
-        setEmails(fetchedList);
-        showToast(`Fetched ${fetchedList.length} emails via AI workflow!`);
+      if (rawList.length > 0) {
+        const normalized = rawList.map((item, idx) => normalizeEmailItem(item, idx));
+        setEmails(normalized);
+        setSelectedEmailId(normalized[0].id);
+        showToast(`Fetched ${normalized.length} email(s) via AI workflow!`);
       } else {
-        showToast('Webhook triggered! Check Agent Builder canvas output.');
+        showToast('Webhook triggered successfully!');
       }
     } else {
       setApiStatus('error');
