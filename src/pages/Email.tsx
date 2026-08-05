@@ -157,7 +157,7 @@ export default function Email() {
       preview,
       summary,
       body: body || summary,
-      actionItems: actionItems.length > 0 ? actionItems : undefined,
+      actionItems,
       followUpItem: raw.followUpItem ? String(raw.followUpItem) : undefined,
       deadline: raw.deadline ? String(raw.deadline) : undefined,
       priority,
@@ -225,6 +225,7 @@ export default function Email() {
   };
 
   const handleAddAllTasks = (email: EmailItem) => {
+    if (!email || !email.actionItems || email.actionItems.length === 0) return;
     const newTasks: { [key: string]: boolean } = { ...addedTasks };
     email.actionItems.forEach((_, idx) => {
       newTasks[`${email.id}-${idx}`] = true;
@@ -572,57 +573,59 @@ export default function Email() {
               </div>
 
               {/* 2. EXTRACTED ACTION ITEMS */}
-              <div>
-                <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-3">
-                  EXTRACTED ACTION ITEMS
-                </h4>
+              {activeEmail.actionItems && activeEmail.actionItems.length > 0 && (
+                <div>
+                  <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-3">
+                    EXTRACTED ACTION ITEMS
+                  </h4>
 
-                <div className="space-y-2.5">
-                  {activeEmail.actionItems.map((item, idx) => {
-                    const taskKey = `${activeEmail.id}-${idx}`;
-                    const isDone = addedTasks[taskKey];
+                  <div className="space-y-2.5">
+                    {activeEmail.actionItems.map((item, idx) => {
+                      const taskKey = `${activeEmail.id}-${idx}`;
+                      const isDone = addedTasks[taskKey];
 
-                    return (
-                      <div 
-                        key={idx}
-                        className="flex items-center justify-between p-3 bg-gray-50/70 rounded-xl border border-gray-100 hover:bg-gray-50 transition-colors"
-                      >
-                        <div className="flex items-center gap-3">
-                          <input 
-                            type="checkbox"
-                            checked={isDone || false}
-                            onChange={() => handleAddTask(taskKey, item)}
-                            className="w-4 h-4 rounded text-[#7B3FF2] focus:ring-[#7B3FF2] border-gray-300 cursor-pointer"
-                          />
-                          <span className={`text-xs font-medium ${isDone ? 'line-through text-gray-400' : 'text-gray-800'}`}>
-                            {item}
-                          </span>
-                        </div>
-
-                        <button
-                          onClick={() => handleAddTask(taskKey, item)}
-                          disabled={isDone}
-                          className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1 cursor-pointer ${
-                            isDone
-                              ? 'bg-green-50 text-green-600 border border-green-200'
-                              : 'bg-[#F3EEFF] text-[#7B3FF2] hover:bg-[#7B3FF2] hover:text-white border border-[#7B3FF2]/20'
-                          }`}
+                      return (
+                        <div 
+                          key={idx}
+                          className="flex items-center justify-between p-3 bg-gray-50/70 rounded-xl border border-gray-100 hover:bg-gray-50 transition-colors"
                         >
-                          <Plus className="w-3.5 h-3.5" />
-                          {isDone ? 'Added to Tasks' : 'Add to Tasks'}
-                        </button>
-                      </div>
-                    );
-                  })}
+                          <div className="flex items-center gap-3">
+                            <input 
+                              type="checkbox"
+                              checked={isDone || false}
+                              onChange={() => handleAddTask(taskKey, item)}
+                              className="w-4 h-4 rounded text-[#7B3FF2] focus:ring-[#7B3FF2] border-gray-300 cursor-pointer"
+                            />
+                            <span className={`text-xs font-medium ${isDone ? 'line-through text-gray-400' : 'text-gray-800'}`}>
+                              {item}
+                            </span>
+                          </div>
 
-                  <button 
-                    onClick={() => handleAddAllTasks(activeEmail)}
-                    className="text-xs font-bold text-[#7B3FF2] hover:underline flex items-center gap-1 cursor-pointer pt-1"
-                  >
-                    + Add all to Tasks
-                  </button>
+                          <button
+                            onClick={() => handleAddTask(taskKey, item)}
+                            disabled={isDone}
+                            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1 cursor-pointer ${
+                              isDone
+                                ? 'bg-green-50 text-green-600 border border-green-200'
+                                : 'bg-[#F3EEFF] text-[#7B3FF2] hover:bg-[#7B3FF2] hover:text-white border border-[#7B3FF2]/20'
+                            }`}
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                            {isDone ? 'Added to Tasks' : 'Add to Tasks'}
+                          </button>
+                        </div>
+                      );
+                    })}
+
+                    <button 
+                      onClick={() => handleAddAllTasks(activeEmail)}
+                      className="text-xs font-bold text-[#7B3FF2] hover:underline flex items-center gap-1 cursor-pointer pt-1"
+                    >
+                      + Add all to Tasks
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* 3. SUGGESTED FOLLOW-UP */}
               {activeEmail.followUpItem && (
