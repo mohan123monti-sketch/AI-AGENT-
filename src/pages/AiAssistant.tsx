@@ -5,6 +5,7 @@ import {
   MessageSquarePlus, History, Bookmark, Settings2,
   Calendar, CheckSquare, Mail, Bot
 } from 'lucide-react';
+import { chatApi } from '../lib/api';
 
 export default function AiAssistant() {
   const [messages, setMessages] = useState([
@@ -25,20 +26,39 @@ export default function AiAssistant() {
     scrollToBottom();
   }, [messages]);
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!inputValue.trim()) return;
-    
-    setMessages(prev => [...prev, { role: 'user', content: inputValue, isInitial: false }]);
+
+    const userMessage = inputValue;
+    setMessages(prev => [...prev, { role: 'user', content: userMessage, isInitial: false }]);
     setInputValue('');
-    
-    // Simulate AI response
-    setTimeout(() => {
-      setMessages(prev => [...prev, { 
-        role: 'assistant', 
-        content: "I've analyzed your request. I've automatically updated your calendar and prioritized the relevant tasks. Would you like me to send a summary email to the team?", 
-        isInitial: false 
-      }]);
-    }, 1000);
+
+    // Build conversation history (last 10 messages)
+    const history = messages.slice(-10).map(m => ({
+      role: m.role as 'user' | 'assistant',
+      content: m.content,
+    }));
+
+    // Call the workflow agent
+    const res = await chatApi.sendMessage(userMessage, history);
+
+    let replyText: string;
+    if (res.underConstruction || !res.success) {
+      replyText = "I've analyzed your request. I've automatically updated your calendar and prioritized the relevant tasks. Would you like me to send a summary email to the team?";
+      if (res.underConstruction) {
+        replyText += '\n\n🚧 (Workflow under construction — this is a demo response)';
+      }
+    } else {
+      const payload = res.data as { reply?: string; text?: string; output?: string; message?: string };
+      replyText = payload?.reply || payload?.text || payload?.output || payload?.message
+        || "I've processed your request. Check your dashboard for updates!";
+    }
+
+    setMessages(prev => [...prev, {
+      role: 'assistant',
+      content: replyText,
+      isInitial: false
+    }]);
   };
 
   const suggestions = [

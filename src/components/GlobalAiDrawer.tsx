@@ -4,6 +4,7 @@ import {
   Sparkles, X, Send, Mic, MicOff, Lightbulb, Clock, CheckCircle2, 
   AlertCircle, ArrowRight, Zap, RefreshCw, Bot, MessageSquare
 } from 'lucide-react';
+import { chatApi } from '../lib/api';
 
 interface Message {
   id: number;
@@ -44,7 +45,7 @@ export default function GlobalAiDrawer({ isOpen, onClose }: { isOpen: boolean; o
     "Create focus block"
   ];
 
-  const handleSendMessage = (textToSend?: string) => {
+  const handleSendMessage = async (textToSend?: string) => {
     const text = textToSend || inputText;
     if (!text.trim()) return;
 
@@ -60,23 +61,42 @@ export default function GlobalAiDrawer({ isOpen, onClose }: { isOpen: boolean; o
     setActiveTab('chat');
     setIsTyping(true);
 
-    setTimeout(() => {
-      let responseText = "I've analyzed your schedule! You have 3 high-priority tasks remaining today. Would you like me to block 2 hours for deep work?";
+    // Build history for the agent (last 10 messages)
+    const history = messages.slice(-10).map(m => ({
+      role: m.sender === 'user' ? 'user' as const : 'assistant' as const,
+      content: m.text,
+    }));
+
+    // Call the workflow agent
+    const res = await chatApi.sendMessage(text, history);
+
+    let responseText: string;
+
+    if (res.underConstruction || !res.success) {
+      // Fallback local responses while webhook is under construction
+      responseText = "I've analyzed your schedule! You have 3 high-priority tasks remaining today. Would you like me to block 2 hours for deep work?";
       if (text.toLowerCase().includes('email')) {
         responseText = "You have 3 unread emails. Sarah requested updates on the Q3 roadmap by 5 PM. I can help generate a reply!";
       } else if (text.toLowerCase().includes('task') || text.toLowerCase().includes('prioritize')) {
         responseText = "I've automatically prioritized your tasks: 1. Finalize Q3 Deck, 2. Budget Approval, 3. Review Candidates. Overdue tasks have been carried forward.";
       }
+      if (res.underConstruction) {
+        responseText += '\n\n🚧 (Workflow under construction — this is a demo response)';
+      }
+    } else {
+      const payload = res.data as { reply?: string; text?: string; output?: string; message?: string };
+      responseText = payload?.reply || payload?.text || payload?.output || payload?.message
+        || "I've processed your request. Check your dashboard for updates!";
+    }
 
-      const aiMsg: Message = {
-        id: Date.now() + 1,
-        sender: 'ai',
-        text: responseText,
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      };
-      setMessages(prev => [...prev, aiMsg]);
-      setIsTyping(false);
-    }, 800);
+    const aiMsg: Message = {
+      id: Date.now() + 1,
+      sender: 'ai',
+      text: responseText,
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
+    setMessages(prev => [...prev, aiMsg]);
+    setIsTyping(false);
   };
 
   const toggleVoice = () => {

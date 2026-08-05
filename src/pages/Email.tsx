@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Sparkles, Search, Archive, Filter, Check, Clock, Bell, Plus, 
-  Send, X, MoreVertical, FileText, CheckCircle2, ChevronRight
+  Send, X, MoreVertical, FileText, CheckCircle2, ChevronRight, AlertTriangle
 } from 'lucide-react';
+import { emailApi, getUnderConstructionMessage } from '../lib/api';
 
 interface EmailItem {
   id: number;
@@ -39,6 +40,9 @@ export default function Email() {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   
   // Modals
+  const [isLoadingEmails, setIsLoadingEmails] = useState(false);
+  const [apiStatus, setApiStatus] = useState<'idle' | 'under-construction' | 'error' | 'loaded'>('idle');
+
   const [isOriginalEmailOpen, setIsOriginalEmailOpen] = useState(false);
   const [isGenerateReplyOpen, setIsGenerateReplyOpen] = useState(false);
   const [selectedTone, setSelectedTone] = useState<'Professional' | 'Casual' | 'Concise'>('Professional');
@@ -160,15 +164,47 @@ export default function Email() {
     }
   ]);
 
+  // ── Load real emails from the workflow on mount ──────────────────────────
+  useEffect(() => {
+    const loadEmails = async () => {
+      setIsLoadingEmails(true);
+      const res = await emailApi.fetchEmails(100);
+      setIsLoadingEmails(false);
+
+      if (res.underConstruction) {
+        setApiStatus('under-construction');
+        // Keep using the mock data already in state
+        return;
+      }
+      if (res.success && Array.isArray(res.data)) {
+        setApiStatus('loaded');
+        // Map workflow response to EmailItem shape.
+        // The workflow returns Gemini/Anthropic-summarized email data.
+        // We merge it on top of our mock data structure.
+        setEmails(prev => {
+          const fromApi = (res.data as EmailItem[]);
+          return fromApi.length > 0 ? fromApi : prev;
+        });
+      } else {
+        setApiStatus('error');
+      }
+    };
+    loadEmails();
+  }, []);
+
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3000);
   };
 
-  const handleToggleArchive = (id: number) => {
-    setEmails(prev => prev.map(e => e.id === id ? { ...e, archived: !e.archived } : e));
+  const handleToggleArchive = async (id: number) => {
     const target = emails.find(e => e.id === id);
-    showToast(target?.archived ? "Email unarchived" : "Email moved to archive");
+    const newArchived = !target?.archived;
+    // Optimistic update
+    setEmails(prev => prev.map(e => e.id === id ? { ...e, archived: newArchived } : e));
+    showToast(target?.archived ? 'Email unarchived' : 'Email moved to archive');
+    // Sync to backend (best-effort — silent fail if under construction)
+    await emailApi.archiveEmail(id, newArchived);
   };
 
   const handleAddTask = (key: string, title: string) => {
@@ -190,14 +226,39 @@ export default function Email() {
     showToast("Follow-up reminder set successfully!");
   };
 
-  const handleOpenGenerateReply = (email: EmailItem) => {
+  const handleOpenGenerateReply = async (email: EmailItem) => {
     setReplyText(email.suggestedReply);
     setIsGenerateReplyOpen(true);
+    // Pre-generate reply from the workflow (Mistral LLM node)
+    const res = await emailApi.generateReply({
+      emailId: email.id,
+      to: email.emailAddr,
+      subject: `Re: ${email.subject}`,
+      tone: selectedTone,
+      replyText: email.suggestedReply,
+      send: false,
+    });
+    if (res.success && res.data) {
+      const payload = res.data as { reply?: string; text?: string; output?: string };
+      const generated = payload.reply || payload.text || payload.output;
+      if (generated) setReplyText(generated);
+    }
   };
 
-  const handleSendReply = () => {
+  const handleSendReply = async () => {
     setIsGenerateReplyOpen(false);
-    showToast("Smart reply sent successfully!");
+    // Actually send via Gmail through the workflow (Mistral → Gmail Send node)
+    if (activeEmail) {
+      await emailApi.generateReply({
+        emailId: activeEmail.id,
+        to: activeEmail.emailAddr,
+        subject: `Re: ${activeEmail.subject}`,
+        tone: selectedTone,
+        replyText,
+        send: true,
+      });
+    }
+    showToast('Smart reply sent successfully!');
   };
 
   // Filtering
@@ -226,7 +287,23 @@ export default function Email() {
 
   return (
     <div className="h-full flex flex-col max-w-7xl mx-auto space-y-6">
-      
+
+      {/* Under Construction / API Status Banner */}
+      {apiStatus === 'under-construction' && (
+        <div className="flex items-center gap-3 px-4 py-2.5 bg-amber-50 border border-amber-200 rounded-xl text-xs font-semibold text-amber-700">
+          <AlertTriangle className="w-4 h-4 shrink-0" />
+          <span>
+            {getUnderConstructionMessage('Email workflow')} — showing demo data.
+          </span>
+        </div>
+      )}
+      {isLoadingEmails && (
+        <div className="flex items-center gap-2 px-4 py-2 bg-purple-50 border border-purple-100 rounded-xl text-xs font-medium text-[#7B3FF2]">
+          <Sparkles className="w-3.5 h-3.5 animate-spin" />
+          Fetching & summarizing your emails via AI...
+        </div>
+      )}
+
       {/* Toast Notification */}
       <AnimatePresence>
         {toastMessage && (

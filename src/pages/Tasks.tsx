@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Calendar as CalendarIcon, Clock, CheckSquare, Hourglass, 
   Search, Filter, Plus, MoreHorizontal, MoreVertical, X, Check, 
   Trash2, Edit2, Sparkles, Tag, ChevronDown, User
 } from 'lucide-react';
+import { tasksApi } from '../lib/api';
 
 export type TaskStatus = 'To Do' | 'In Progress' | 'Completed';
 export type TaskPriority = 'High' | 'Medium' | 'Low';
@@ -94,7 +95,20 @@ export default function Tasks() {
   const [activeTab, setActiveTab] = useState<string>('today');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
-  
+
+  // Load tasks from the workflow on mount
+  useEffect(() => {
+    const loadTasks = async () => {
+      const res = await tasksApi.fetchTasks();
+      if (res.success && Array.isArray(res.data)) {
+        const fromApi = res.data as TaskItem[];
+        if (fromApi.length > 0) setTasks(fromApi);
+      }
+      // Under construction — keep mock data silently
+    };
+    loadTasks();
+  }, []);
+
   // Modals
   const [isNewTaskModalOpen, setIsNewTaskModalOpen] = useState<boolean>(false);
   const [editingTask, setEditingTask] = useState<TaskItem | null>(null);
@@ -167,19 +181,22 @@ export default function Tasks() {
   };
 
   // Delete Task
-  const handleDeleteTask = (id: string) => {
-    setTasks(prev => prev.filter(t => t.id !== id));
+  const handleDeleteTask = async (id: string) => {
+    setTasks(prev => prev.filter(t => t.id !== id)); // optimistic
     setActiveMenuTaskId(null);
+    await tasksApi.deleteTask(id); // best-effort sync
   };
 
   // Save Task
-  const handleSaveTask = () => {
+  const handleSaveTask = async () => {
     if (!formData.title?.trim()) return;
 
+    let taskToSave: TaskItem;
     if (editingTask) {
-      setTasks(prev => prev.map(t => t.id === editingTask.id ? { ...t, ...formData } as TaskItem : t));
+      taskToSave = { ...editingTask, ...formData } as TaskItem;
+      setTasks(prev => prev.map(t => t.id === editingTask.id ? taskToSave : t));
     } else {
-      const newTask: TaskItem = {
+      taskToSave = {
         id: `task-${Date.now()}`,
         title: formData.title || 'Untitled Task',
         description: formData.description || '',
@@ -189,9 +206,11 @@ export default function Tasks() {
         status: formData.status || 'To Do',
         assigneeAvatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=user${Date.now()}`
       };
-      setTasks(prev => [newTask, ...prev]);
+      setTasks(prev => [taskToSave, ...prev]);
     }
     setIsNewTaskModalOpen(false);
+    // Best-effort sync to backend
+    await tasksApi.upsertTask(taskToSave as unknown as Record<string, unknown>);
   };
 
   // Color helper for priorities

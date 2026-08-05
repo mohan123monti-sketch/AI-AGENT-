@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Calendar as CalendarIcon, ChevronLeft, ChevronRight, Clock, 
   Sparkles, Plus, Video, Trash2, Edit2, X, Check, Bell, 
   ChevronDown, AlertCircle, FileText, CheckCircle2, User, Filter
 } from 'lucide-react';
+import { plannerApi } from '../lib/api';
 
 export type EventCategory = 'Focus Block' | 'Meeting' | 'Carried Forward' | 'Break' | 'Task';
 export type EventPriority = 'HIGH' | 'MEDIUM' | 'LOW';
@@ -116,6 +117,19 @@ export default function Planner() {
     }
   ]);
 
+  // Load events from the workflow on mount (Google Calendar or MongoDB)
+  useEffect(() => {
+    const loadEvents = async () => {
+      const res = await plannerApi.fetchEvents();
+      if (res.success && Array.isArray(res.data)) {
+        const fromApi = res.data as PlannerEvent[];
+        if (fromApi.length > 0) setEvents(fromApi);
+      }
+      // Under construction — keep mock data silently
+    };
+    loadEvents();
+  }, []);
+
   // Reminders matching screenshot
   const [reminders, setReminders] = useState<ReminderItem[]>([
     { id: 'rem-1', title: 'Submit weekly report', time: 'Today, 4:00 PM', priority: 'High' },
@@ -152,10 +166,11 @@ export default function Planner() {
     }));
   };
 
-  const handleDeleteEvent = (id: string) => {
+  const handleDeleteEvent = async (id: string) => {
     const target = events.find(e => e.id === id);
-    setEvents(prev => prev.filter(e => e.id !== id));
+    setEvents(prev => prev.filter(e => e.id !== id)); // optimistic
     showToast(`Deleted event "${target?.title}"`);
+    await plannerApi.deleteEvent(id); // best-effort sync
   };
 
   const handleOpenAddEvent = () => {
@@ -200,7 +215,7 @@ export default function Planner() {
     setIsAddEventModalOpen(true);
   };
 
-  const handleSaveEvent = () => {
+  const handleSaveEvent = async () => {
     if (!eventForm.title.trim()) return;
 
     let tags: string[] = [];
@@ -214,9 +229,10 @@ export default function Planner() {
       tags = ['FOCUS', eventForm.priority];
     }
 
+    let eventToSave: PlannerEvent;
     if (editingEvent) {
-      setEvents(prev => prev.map(e => e.id === editingEvent.id ? {
-        ...e,
+      eventToSave = {
+        ...editingEvent,
         title: eventForm.title,
         description: eventForm.description,
         category: eventForm.category,
@@ -224,11 +240,12 @@ export default function Planner() {
         startTime: eventForm.startTime,
         endTime: eventForm.endTime,
         platform: eventForm.platform,
-        tags: tags
-      } : e));
+        tags,
+      };
+      setEvents(prev => prev.map(e => e.id === editingEvent.id ? eventToSave : e));
       showToast(`Updated "${eventForm.title}"`);
     } else {
-      const newEvt: PlannerEvent = {
+      eventToSave = {
         id: `evt-${Date.now()}`,
         title: eventForm.title,
         description: eventForm.description,
@@ -238,15 +255,17 @@ export default function Planner() {
         category: eventForm.category,
         priority: eventForm.priority,
         platform: eventForm.platform,
-        tags: tags,
+        tags,
         completed: false
       };
-      setEvents(prev => [...prev, newEvt]);
+      setEvents(prev => [...prev, eventToSave]);
       showToast(`Created event "${eventForm.title}"`);
     }
 
     setIsAddEventModalOpen(false);
     setIsScheduleMeetingModalOpen(false);
+    // Best-effort sync to backend
+    await plannerApi.upsertEvent(eventToSave as unknown as Record<string, unknown>);
   };
 
   const handleSaveReminder = () => {
