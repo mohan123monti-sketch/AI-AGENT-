@@ -486,20 +486,7 @@ export default function Planner() {
           </div>
 
           {/* Timeline View Items List */}
-          <div className="relative space-y-4 pl-16">
-            
-            {/* Timeline Hour Markers */}
-            <div className="absolute left-0 top-0 bottom-0 w-14 flex flex-col justify-between text-[11px] font-medium text-gray-400 border-r border-gray-100 pr-2 pointer-events-none">
-              <span>06:00 AM</span>
-              <span>07:00 AM</span>
-              <span>08:00 AM</span>
-              <span>09:00 AM</span>
-              <span>10:00 AM</span>
-              <span>11:00 AM</span>
-              <span>12:00 PM</span>
-              <span>01:00 PM</span>
-            </div>
-
+          <div className="relative space-y-4">
             {/* Event Items Cards */}
             {events.map((evt) => {
               // Accent styling mapping
