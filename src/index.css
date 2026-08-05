@@ -25,30 +25,33 @@
   --radius-xl: 20px;
 }
 
-@layer base {
-  body {
-    @apply font-sans antialiased bg-bg-light text-sidebar-light;
-  }
-  
-  h1, h2, h3, h4, h5, h6 {
-    @apply font-heading;
-  }
-  
-  .dark-theme {
-    @apply bg-bg-dark text-text-dark;
-  }
-  
-  .glass-card {
-    background: rgba(21, 21, 32, 0.6);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid var(--color-border-dark);
-  }
-  
-  .glass-card-light {
-    background: rgba(255, 255, 255, 0.8);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(0, 0, 0, 0.05);
-  }
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-bg-light);
+  color: var(--color-sidebar-light);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+}
+
+.dark-theme {
+  background-color: var(--color-bg-dark);
+  color: var(--color-text-dark);
+}
+
+.glass-card {
+  background: rgba(21, 21, 32, 0.6);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--color-border-dark);
+}
+
+.glass-card-light {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(0, 0, 0, 0.05);
 }
