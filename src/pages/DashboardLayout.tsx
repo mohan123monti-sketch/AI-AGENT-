@@ -171,9 +171,13 @@ export default function DashboardLayout() {
             </div>
 
             {/* Profile Avatar */}
-            <Link to="/dashboard/settings" className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#7B3FF2] to-[#FF7A00] p-[2px] cursor-pointer">
+            <Link to="/dashboard/settings" title={user?.name || 'User Profile'} className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#7B3FF2] to-[#FF7A00] p-[2px] cursor-pointer">
               <div className="w-full h-full rounded-full border-2 border-white bg-gray-900 overflow-hidden">
-                <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=PlanAI&backgroundColor=b6e3f4`} alt="User" className="w-full h-full object-cover" />
+                <img 
+                  src={user?.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=PlanAI'} 
+                  alt={user?.name || 'User Profile'} 
+                  className="w-full h-full object-cover" 
+                />
               </div>
             </Link>
           </div>

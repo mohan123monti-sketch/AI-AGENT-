@@ -1,10 +1,21 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { User, Bell, Shield, Sparkles, Sliders, Check } from 'lucide-react';
+import { User as UserIcon, Bell, Shield, Sparkles, Sliders, Check } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 export default function Settings() {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('profile');
   const [saved, setSaved] = useState(false);
+  const [name, setName] = useState(user?.name || '');
+  const [email, setEmail] = useState(user?.email || '');
+
+  useEffect(() => {
+    if (user) {
+      setName(user.name);
+      setEmail(user.email);
+    }
+  }, [user]);
 
   const handleSave = () => {
     setSaved(true);
@@ -30,7 +41,7 @@ export default function Settings() {
         {/* Sub-nav */}
         <div className="w-full md:w-64 space-y-1">
           {[
-            { id: 'profile', label: 'Profile Settings', icon: <User className="w-4 h-4" /> },
+            { id: 'profile', label: 'Profile Settings', icon: <UserIcon className="w-4 h-4" /> },
             { id: 'ai', label: 'AI Preferences', icon: <Sparkles className="w-4 h-4" /> },
             { id: 'notifications', label: 'Notifications', icon: <Bell className="w-4 h-4" /> },
             { id: 'security', label: 'Security & Privacy', icon: <Shield className="w-4 h-4" /> },
@@ -58,7 +69,11 @@ export default function Settings() {
               <div className="flex items-center gap-4">
                 <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-[#7B3FF2] to-[#FF7A00] p-0.5">
                   <div className="w-full h-full rounded-full border-2 border-white bg-gray-900 overflow-hidden">
-                    <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=PlanAI&backgroundColor=b6e3f4`} alt="User Avatar" className="w-full h-full object-cover" />
+                    <img 
+                      src={user?.avatar || "https://api.dicebear.com/7.x/avataaars/svg?seed=PlanAI"} 
+                      alt={user?.name || "User Avatar"} 
+                      className="w-full h-full object-cover" 
+                    />
                   </div>
                 </div>
                 <div>
@@ -71,11 +86,21 @@ export default function Settings() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
-                  <input type="text" defaultValue="Alex Morgan" className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#7B3FF2]/20 focus:border-[#7B3FF2] text-sm" />
+                  <input 
+                    type="text" 
+                    value={name} 
+                    onChange={(e) => setName(e.target.value)} 
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#7B3FF2]/20 focus:border-[#7B3FF2] text-sm" 
+                  />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
-                  <input type="email" defaultValue="alex@planai.com" className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#7B3FF2]/20 focus:border-[#7B3FF2] text-sm" />
+                  <input 
+                    type="email" 
+                    value={email} 
+                    onChange={(e) => setEmail(e.target.value)} 
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#7B3FF2]/20 focus:border-[#7B3FF2] text-sm" 
+                  />
                 </div>
               </div>
 
