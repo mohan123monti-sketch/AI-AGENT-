@@ -48,121 +48,21 @@ export default function Email() {
   const [selectedTone, setSelectedTone] = useState<'Professional' | 'Casual' | 'Concise'>('Professional');
   const [replyText, setReplyText] = useState('');
 
-  const [emails, setEmails] = useState<EmailItem[]>([
-    {
-      id: 1,
-      sender: "Sarah Jenkins",
-      emailAddr: "sarah.jenkins@company.com",
-      initial: "S",
-      avatarBg: "bg-[#7B3FF2] text-white",
-      subject: "Q3 Roadmap Update Required",
-      time: "10:30 AM",
-      fullTime: "Aug 4, 2025 10:30 AM",
-      preview: "Sarah is asking for the final Q3 roadmap deck by EOD today...",
-      summary: "Sarah is asking for the final Q3 roadmap deck by EOD today. She also mentioned the budget review is pushed to tomorrow.",
-      body: `Hi Alex,\n\nI hope you're having a great morning!\n\nCould you please share the updated Q3 roadmap deck with the leadership team before 5 PM today? We need to finalize the quarterly key metrics before tomorrow's board review.\n\nAlso, please note that our scheduled budget review meeting has been pushed to tomorrow at 2 PM.\n\nLet me know if you run into any blockers.\n\nBest,\nSarah`,
-      actionItems: [
-        "Send Q3 roadmap deck by EOD today (5 PM)",
-        "Update calendar for budget review tomorrow at 2 PM"
-      ],
-      followUpItem: "Follow up with Sarah if deck is delayed past 4:30 PM",
-      deadline: "Today, 5:00 PM",
-      priority: "HIGH",
-      actionRequired: true,
-      archived: false,
-      read: false,
-      suggestedReply: `Hi Sarah,\n\nThanks for the note. I am currently polishing the final slides of the Q3 roadmap deck and will share it with you well before 5 PM today.\n\nI've also updated my calendar for tomorrow's budget review at 2 PM.\n\nBest regards,\nAlex`
-    },
-    {
-      id: 2,
-      sender: "David Chen",
-      emailAddr: "david.chen@design.co",
-      initial: "D",
-      avatarBg: "bg-blue-600 text-white",
-      subject: "Design Sync Notes & Guidelines",
-      time: "09:15 AM",
-      fullTime: "Aug 4, 2025 09:15 AM",
-      preview: "Notes from the morning sync. The new logo variations...",
-      summary: "Notes from the morning sync. The new logo variations have been approved. Next step is to prepare the brand guidelines doc.",
-      body: `Hey Alex,\n\nGreat progress on the design sync this morning! Leadership officially approved all 3 new logo variations.\n\nNext action step is to compile the full brand guidelines document before Friday EOD. Let's touch base tomorrow morning to split up the sections.\n\nThanks,\nDavid`,
-      actionItems: [
-        "Review and prepare brand guidelines document before Friday",
-        "Coordinate design token handoff with frontend lead"
-      ],
-      followUpItem: "Confirm design tokens with David before Thursday sync",
-      deadline: "Friday, 5:00 PM",
-      priority: "MEDIUM",
-      actionRequired: false,
-      archived: false,
-      read: false,
-      suggestedReply: `Hi David,\n\nAwesome news! I'll review the approved logo files and draft the structure for the brand guidelines doc ahead of our sync tomorrow.\n\nBest,\nAlex`
-    },
-    {
-      id: 3,
-      sender: "Maria Gonzalez",
-      emailAddr: "maria.g@company.com",
-      initial: "M",
-      avatarBg: "bg-emerald-600 text-white",
-      subject: "Budget Review Meeting Rescheduled",
-      time: "Yesterday",
-      fullTime: "Aug 3, 2025 04:15 PM",
-      preview: "The budget review meeting has been rescheduled to...",
-      summary: "The budget review meeting has been rescheduled to tomorrow at 2 PM. Please update your calendar availability.",
-      body: `Hi Team,\n\nDue to a scheduling conflict with room reservations, tomorrow's Budget Review meeting has been moved from 11 AM to 2 PM.\n\nPlease confirm your availability on the updated calendar invite.\n\nRegards,\nMaria`,
-      actionItems: [
-        "Confirm calendar availability for tomorrow's 2 PM slot"
-      ],
-      followUpItem: "Send preliminary financial breakdown to Maria",
-      deadline: "Tomorrow, 2:00 PM",
-      priority: "MEDIUM",
-      actionRequired: true,
-      archived: false,
-      read: true,
-      suggestedReply: `Hi Maria,\n\nReceived and confirmed! I've accepted the updated calendar invite for 2 PM tomorrow.\n\nThanks,\nAlex`
-    },
-    {
-      id: 4,
-      sender: "Team Updates",
-      emailAddr: "digest@company.com",
-      initial: "T",
-      avatarBg: "bg-amber-500 text-white",
-      subject: "Weekly Team Digest",
-      time: "Yesterday",
-      fullTime: "Aug 3, 2025 09:00 AM",
-      preview: "Here's your weekly digest of important updates and...",
-      summary: "Here's your weekly digest of important engineering updates, hiring milestones, and upcoming product releases.",
-      body: `Hello Team,\n\nHere is your weekly summary of company highlights:\n1. Sprint 24 completed with 98% story points velocity.\n2. Welcome our 2 new senior frontend engineers starting next Monday!\n3. All-hands meeting scheduled for Thursday at 4 PM.\n\nHave a productive week ahead!`,
-      actionItems: [
-        "Submit team highlight snippet for issue #44"
-      ],
-      priority: "LOW",
-      actionRequired: false,
-      archived: false,
-      read: true,
-      suggestedReply: `Thanks for the updates! Excited to welcome the new engineers.`
-    },
-    {
-      id: 5,
-      sender: "James Wilson",
-      emailAddr: "james.wilson@client.com",
-      initial: "J",
-      avatarBg: "bg-indigo-600 text-white",
-      subject: "Client Feedback Summary",
-      time: "Aug 2",
-      fullTime: "Aug 2, 2025 02:30 PM",
-      preview: "Sharing the client feedback summary from this week...",
-      summary: "Sharing the client feedback summary from this week. Overall positive response with request for minor dashboard UI polish.",
-      body: `Hi Alex,\n\nWe wrapped up the Q2 client review session. The client loved the new AI features and responsive UI layout!\n\nThey requested a few minor visual tweaks on the analytics graphs before full rollout.\n\nBest,\nJames`,
-      actionItems: [
-        "Address client UI polish comments in upcoming sprint"
-      ],
-      priority: "LOW",
-      actionRequired: false,
-      archived: false,
-      read: true,
-      suggestedReply: `Hi James,\n\nThanks for sharing the feedback! Great to hear the client is happy. We will schedule the graph visual tweaks into the next sprint.\n\nBest,\nAlex`
+  const EMAIL_STORAGE_KEY = 'planai_user_emails';
+
+  const [emails, setEmails] = useState<EmailItem[]>(() => {
+    try {
+      const saved = localStorage.getItem(EMAIL_STORAGE_KEY);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
     }
-  ]);
+  });
+
+  // Persist local emails
+  useEffect(() => {
+    localStorage.setItem(EMAIL_STORAGE_KEY, JSON.stringify(emails));
+  }, [emails]);
 
   // ── Load real emails from the workflow on mount ──────────────────────────
   useEffect(() => {

@@ -53,88 +53,48 @@ export default function Planner() {
     setTimeout(() => setToastMessage(null), 3000);
   };
 
-  // Events matching screenshot
-  const [events, setEvents] = useState<PlannerEvent[]>([
-    {
-      id: 'evt-1',
-      title: 'Morning Routine & Email Review',
-      description: 'Review inbox, set daily goals, clear priority 1 emails.',
-      date: 'Mon, Aug 3',
-      startTime: '07:30 AM',
-      endTime: '08:30 AM',
-      category: 'Break',
-      priority: 'LOW',
-      tags: ['BREAK', 'LOW'],
-      completed: true
-    },
-    {
-      id: 'evt-2',
-      title: 'Product Strategy Sync',
-      description: 'Sprint planning and architecture review with lead dev team.',
-      date: 'Mon, Aug 3',
-      startTime: '09:00 AM',
-      endTime: '10:00 AM',
-      category: 'Meeting',
-      priority: 'HIGH',
-      platform: 'Zoom',
-      tags: ['MEETING', 'Zoom', 'HIGH'],
-      completed: true
-    },
-    {
-      id: 'evt-3',
-      title: 'Carried Forward: Security Audit',
-      description: 'Review security audit findings and assign action items.',
-      date: 'Mon, Aug 3',
-      startTime: '10:30 AM',
-      endTime: '11:30 AM',
-      category: 'Carried Forward',
-      priority: 'HIGH',
-      tags: ['TASK', 'CARRIED FORWARD', 'HIGH'],
-      completed: true,
-      isCarriedForward: true
-    },
-    {
-      id: 'evt-4',
-      title: 'Focus Session: Deep Work',
-      description: 'Work on documentation and technical design.',
-      date: 'Mon, Aug 3',
-      startTime: '11:30 AM',
-      endTime: '12:30 PM',
-      category: 'Focus Block',
-      tags: ['FOCUS'],
-      completed: false
-    },
-    {
-      id: 'evt-5',
-      title: 'Lunch Break',
-      description: 'Take a break and recharge.',
-      date: 'Mon, Aug 3',
-      startTime: '12:30 PM',
-      endTime: '01:00 PM',
-      category: 'Break',
-      tags: ['BREAK'],
-      completed: false
-    }
-  ]);
+  const PLANNER_EVENTS_KEY = 'planai_user_events';
+  const PLANNER_REMINDERS_KEY = 'planai_user_reminders';
 
-  // Load events from the workflow on mount (Google Calendar or MongoDB)
+  // Real User Events
+  const [events, setEvents] = useState<PlannerEvent[]>(() => {
+    try {
+      const saved = localStorage.getItem(PLANNER_EVENTS_KEY);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  // Real User Reminders
+  const [reminders, setReminders] = useState<ReminderItem[]>(() => {
+    try {
+      const saved = localStorage.getItem(PLANNER_REMINDERS_KEY);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  // Persist locally
+  useEffect(() => {
+    localStorage.setItem(PLANNER_EVENTS_KEY, JSON.stringify(events));
+  }, [events]);
+
+  useEffect(() => {
+    localStorage.setItem(PLANNER_REMINDERS_KEY, JSON.stringify(reminders));
+  }, [reminders]);
+
+  // Load events from the workflow on mount (Google Calendar or MongoDB) if available
   useEffect(() => {
     const loadEvents = async () => {
       const res = await plannerApi.fetchEvents();
-      if (res.success && Array.isArray(res.data)) {
-        const fromApi = res.data as PlannerEvent[];
-        if (fromApi.length > 0) setEvents(fromApi);
+      if (res.success && Array.isArray(res.data) && res.data.length > 0) {
+        setEvents(res.data as PlannerEvent[]);
       }
-      // Under construction — keep mock data silently
     };
     loadEvents();
   }, []);
-
-  // Reminders matching screenshot
-  const [reminders, setReminders] = useState<ReminderItem[]>([
-    { id: 'rem-1', title: 'Submit weekly report', time: 'Today, 4:00 PM', priority: 'High' },
-    { id: 'rem-2', title: 'Client follow-up', time: 'Tomorrow, 10:30 AM', priority: 'Medium' }
-  ]);
 
   // Event Form State
   const [eventForm, setEventForm] = useState({

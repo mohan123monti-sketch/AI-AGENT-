@@ -6,8 +6,10 @@ import {
   Settings as SettingsIcon, LogOut, X
 } from 'lucide-react';
 import GlobalAiDrawer from '../components/GlobalAiDrawer';
+import { useAuth } from '../context/AuthContext';
 
 export default function DashboardLayout() {
+  const { user, logout } = useAuth();
   const [isAiDrawerOpen, setIsAiDrawerOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
 
@@ -81,10 +83,13 @@ export default function DashboardLayout() {
               </>
             )}
           </NavLink>
-          <Link to="/login" className="flex items-center gap-3 px-3 py-2 rounded-xl transition-all font-medium text-sm hover:bg-white/5 hover:text-red-400 w-full text-left">
+          <button 
+            onClick={logout}
+            className="flex items-center gap-3 px-3 py-2 rounded-xl transition-all font-medium text-sm hover:bg-white/5 hover:text-red-400 w-full text-left cursor-pointer"
+          >
             <LogOut className="w-4 h-4 text-gray-400" />
             Logout
-          </Link>
+          </button>
 
           {/* User Profile Card at Sidebar Bottom */}
           <div className="pt-3 mt-2 border-t border-white/5">
@@ -92,15 +97,18 @@ export default function DashboardLayout() {
               <div className="flex items-center gap-2.5 min-w-0">
                 <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#7B3FF2] to-[#FF7A00] p-[1.5px] shrink-0">
                   <div className="w-full h-full rounded-full bg-gray-900 overflow-hidden">
-                    <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=PlanAI&backgroundColor=b6e3f4" alt="Alex Morgan" className="w-full h-full object-cover" />
+                    <img 
+                      src={user?.avatar || "https://api.dicebear.com/7.x/avataaars/svg?seed=PlanAI"} 
+                      alt={user?.name || "User Profile"} 
+                      className="w-full h-full object-cover" 
+                    />
                   </div>
                 </div>
                 <div className="min-w-0">
-                  <h5 className="text-xs font-bold text-white truncate">Alex Morgan</h5>
-                  <p className="text-[10px] text-gray-400 truncate">alex@planai.com</p>
+                  <h5 className="text-xs font-bold text-white truncate">{user?.name || "Logged In User"}</h5>
+                  <p className="text-[10px] text-gray-400 truncate">{user?.email || "user@example.com"}</p>
                 </div>
               </div>
-              <span className="text-gray-400 text-xs cursor-pointer hover:text-white px-1">^</span>
             </div>
           </div>
         </div>

@@ -1,8 +1,31 @@
+import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { Link } from 'react-router-dom';
-import { Sparkles, Calendar, BarChart2, Lightbulb, CheckCircle2, Mail } from 'lucide-react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Sparkles, Calendar, BarChart2, Lightbulb, CheckCircle2, Mail, AlertCircle } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 export default function LoginPage() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { login } = useAuth();
+
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+
+  const from = (location.state as { from?: { pathname?: string } })?.from?.pathname || '/dashboard';
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim() || !password.trim()) {
+      setError('Please fill in all fields.');
+      return;
+    }
+    setError('');
+    login(email);
+    navigate(from, { replace: true });
+  };
+
   return (
     <div className="min-h-screen flex font-sans selection:bg-[#7B3FF2] selection:text-white bg-[#0D0D12]">
       {/* Left Side - Dark Gradient & Benefits */}
@@ -61,15 +84,23 @@ export default function LoginPage() {
             <h2 className="text-2xl font-heading font-bold text-gray-900 mb-2">Log in to your account</h2>
             <p className="text-gray-500">Welcome back! Please enter your details.</p>
           </div>
+
+          {error && (
+            <div className="mb-5 p-3.5 bg-red-50 border border-red-200 text-red-700 rounded-xl text-xs font-semibold flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
+              {error}
+            </div>
+          )}
           
-          <form className="space-y-5" onSubmit={(e) => { e.preventDefault(); window.location.href = '/dashboard'; }}>
+          <form className="space-y-5" onSubmit={handleSubmit}>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
               <input 
                 type="email" 
                 placeholder="Enter your email"
                 className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#7B3FF2]/20 focus:border-[#7B3FF2] transition-colors"
-                defaultValue="demo@planai.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 required
               />
             </div>
@@ -80,7 +111,8 @@ export default function LoginPage() {
                 type="password" 
                 placeholder="••••••••"
                 className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#7B3FF2]/20 focus:border-[#7B3FF2] transition-colors"
-                defaultValue="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 required
               />
             </div>

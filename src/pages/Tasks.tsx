@@ -31,80 +31,33 @@ export interface TaskItem {
   assigneeAvatar?: string;
 }
 
-const INITIAL_TASKS: TaskItem[] = [
-  {
-    id: 'task-1',
-    title: 'Approve Budget Request',
-    description: 'Review finance department allocation for Q3.',
-    category: 'Finance',
-    dueDate: 'Today, 2:00 PM',
-    priority: 'High',
-    status: 'To Do',
-    isToday: true,
-    assigneeAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Alex'
-  },
-  {
-    id: 'task-2',
-    title: 'Finalize Q3 Marketing Deck',
-    description: 'Prepare executive slides and revenue charts.',
-    category: 'Marketing',
-    dueDate: 'Today, 5:00 PM',
-    priority: 'High',
-    status: 'In Progress',
-    isToday: true,
-    assigneeAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=John'
-  },
-  {
-    id: 'task-3',
-    title: 'Draft Project Proposal',
-    description: 'Initial draft for the Q3 client proposal.',
-    category: 'Business',
-    dueDate: 'Today, 11:30 AM',
-    priority: 'Low',
-    status: 'Completed',
-    isToday: true,
-    assigneeAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Elena'
-  },
-  {
-    id: 'task-4',
-    title: 'Research New CRM Tools',
-    description: 'Compare HubSpot, Salesforce, and Zoho pricing.',
-    category: 'Sales',
-    dueDate: 'Today, 4:00 PM',
-    priority: 'Low',
-    status: 'In Progress',
-    isToday: true,
-    assigneeAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=David'
-  },
-  {
-    id: 'task-5',
-    title: 'Security Compliance Audit',
-    description: 'Incomplete task carried forward from yesterday.',
-    category: 'Engineering',
-    dueDate: 'Yesterday (Carried Forward)',
-    priority: 'High',
-    status: 'To Do',
-    isCarriedForward: true,
-    isToday: false,
-    assigneeAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah'
-  }
-];
+const TASKS_STORAGE_KEY = 'planai_user_tasks';
 
 export default function Tasks() {
-  const [tasks, setTasks] = useState<TaskItem[]>(INITIAL_TASKS);
+  const [tasks, setTasks] = useState<TaskItem[]>(() => {
+    try {
+      const saved = localStorage.getItem(TASKS_STORAGE_KEY);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
   const [activeTab, setActiveTab] = useState<string>('today');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
 
-  // Load tasks from the workflow on mount
+  // Persist tasks locally
+  useEffect(() => {
+    localStorage.setItem(TASKS_STORAGE_KEY, JSON.stringify(tasks));
+  }, [tasks]);
+
+  // Load tasks from the workflow on mount if available
   useEffect(() => {
     const loadTasks = async () => {
       const res = await tasksApi.fetchTasks();
-      if (res.success && Array.isArray(res.data)) {
-        const fromApi = res.data as TaskItem[];
-        if (fromApi.length > 0) setTasks(fromApi);
+      if (res.success && Array.isArray(res.data) && res.data.length > 0) {
+        setTasks(res.data as TaskItem[]);
       }
-      // Under construction — keep mock data silently
     };
     loadTasks();
   }, []);

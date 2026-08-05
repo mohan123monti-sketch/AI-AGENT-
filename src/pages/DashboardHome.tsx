@@ -1,12 +1,72 @@
+import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Link, useNavigate } from 'react-router-dom';
 import { 
   CheckSquare, Mail, Calendar, 
   Clock, Plus, ArrowRight, BarChart2, Sparkles, X, CheckCircle, Zap
 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 export default function DashboardHome() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+
+  // Read real user data from localStorage
+  const [tasks, setTasks] = useState(() => {
+    try {
+      const saved = localStorage.getItem('planai_user_tasks');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const [events, setEvents] = useState(() => {
+    try {
+      const saved = localStorage.getItem('planai_user_events');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const [emails, setEmails] = useState(() => {
+    try {
+      const saved = localStorage.getItem('planai_user_emails');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  // Re-sync if localStorage updates
+  useEffect(() => {
+    const handleStorageChange = () => {
+      try {
+        const savedTasks = localStorage.getItem('planai_user_tasks');
+        if (savedTasks) setTasks(JSON.parse(savedTasks));
+        const savedEvents = localStorage.getItem('planai_user_events');
+        if (savedEvents) setEvents(JSON.parse(savedEvents));
+        const savedEmails = localStorage.getItem('planai_user_emails');
+        if (savedEmails) setEmails(JSON.parse(savedEmails));
+      } catch {
+        // ignore
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
+  const totalTasks = tasks.length;
+  const completedTasks = tasks.filter((t: { status: string }) => t.status === 'Completed').length;
+  const pendingTasks = tasks.filter((t: { status: string }) => t.status !== 'Completed');
+  const todayMeetings = events.filter((e: { category: string }) => e.category === 'Meeting');
+
+  const todayDateString = new Date().toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'short',
+    day: 'numeric'
+  });
 
   return (
     <div className="max-w-7xl mx-auto">
@@ -14,10 +74,10 @@ export default function DashboardHome() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
         <div>
           <h1 className="text-2xl font-heading font-bold text-gray-900 flex items-center gap-2">
-            Good morning, Alex! 👋
+            Good morning, {user?.name || 'Friend'}! 👋
           </h1>
           <p className="text-gray-500 text-xs mt-1 font-medium">
-            Saturday, Aug 1 • You have 7 tasks and 2 meetings today.
+            {todayDateString} • You have {pendingTasks.length} pending task{pendingTasks.length === 1 ? '' : 's'} and {todayMeetings.length} meeting{todayMeetings.length === 1 ? '' : 's'} today.
           </p>
         </div>
         
@@ -39,15 +99,14 @@ export default function DashboardHome() {
             <Sparkles className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h4 className="font-heading font-bold text-sm text-gray-900">AI Insight</h4>
+            <h4 className="font-heading font-bold text-sm text-gray-900">AI Productivity Assistant</h4>
             <p className="text-xs text-gray-700 font-medium leading-snug">
-              You have a 3-hour focus window before your next meeting.<br className="hidden sm:inline" /> Finish "Q3 Marketing Deck" first to maximize your deep work time.
+              {pendingTasks.length > 0
+                ? `You have ${pendingTasks.length} task${pendingTasks.length === 1 ? '' : 's'} pending. Focus on high priority items first.`
+                : `Your schedule is clear! Create your first task or event to let PlanAI optimize your workday.`}
             </p>
           </div>
         </div>
-        <button className="text-gray-400 hover:text-gray-600 p-1 cursor-pointer">
-          <X className="w-4 h-4" />
-        </button>
       </div>
 
       {/* Two-Column Grid */}
@@ -65,33 +124,39 @@ export default function DashboardHome() {
             </Link>
           </div>
 
-          <div className="relative pl-2 space-y-4">
-            {/* Timeline Line */}
-            <div className="absolute left-[78px] top-4 bottom-4 w-[2px] bg-gray-200"></div>
-
-            {[
-              { time: "09:00 AM", title: "Daily Sync with Engineering", duration: "30 min", color: "bg-[#7B3FF2]", cardBg: "bg-[#F3EEFF]/40 border-gray-100" },
-              { time: "09:30 AM", title: "Deep Focus: Q3 Marketing Deck", duration: "2h", color: "bg-[#7B3FF2]", cardBg: "bg-[#F3EEFF]/70 border-[#7B3FF2]/20 font-semibold" },
-              { time: "11:30 AM", title: "Client Meeting", duration: "1h", color: "bg-[#FF7A00]", cardBg: "bg-[#FFF3E8]/80 border-[#FF7A00]/20" },
-              { time: "01:00 PM", title: "Lunch Break", duration: "1h", color: "bg-[#7B3FF2]", cardBg: "bg-gray-50/80 border-gray-100" },
-              { time: "02:00 PM", title: "Review Campaign Analytics", duration: "1.5h", color: "bg-[#7B3FF2]", cardBg: "bg-[#F3EEFF]/40 border-gray-100" },
-              { time: "04:00 PM", title: "Team Standup", duration: "30 min", color: "bg-[#7B3FF2]", cardBg: "bg-[#F3EEFF]/40 border-gray-100" },
-            ].map((item, idx) => (
-              <div key={idx} className="flex items-center gap-4 relative group">
-                <span className="w-16 text-right text-xs font-bold text-gray-500 flex-shrink-0">{item.time}</span>
-                
-                {/* Timeline Dot */}
-                <div className={`w-2.5 h-2.5 rounded-full ${item.color} z-10 flex-shrink-0 ring-4 ring-white`}></div>
-
-                <div className={`flex-1 p-3.5 rounded-xl border ${item.cardBg} transition-all`}>
-                  <h4 className="text-xs font-bold text-gray-900">{item.title}</h4>
-                  <span className="text-[11px] font-medium text-gray-500 flex items-center gap-1 mt-0.5">
-                    <Clock className="w-3 h-3" /> {item.duration}
-                  </span>
+          {events.length === 0 ? (
+            <div className="text-center py-10 px-4 bg-gray-50/50 rounded-2xl border border-dashed border-gray-200">
+              <Calendar className="w-10 h-10 text-gray-300 mx-auto mb-2" />
+              <h4 className="text-sm font-bold text-gray-700 mb-1">No events scheduled for today</h4>
+              <p className="text-xs text-gray-400 max-w-sm mx-auto mb-4">
+                Keep your day organized by adding meetings, focus blocks, or break sessions.
+              </p>
+              <button
+                onClick={() => navigate('/dashboard/planner')}
+                className="inline-flex items-center gap-2 px-3.5 py-2 bg-[#7B3FF2] hover:bg-[#5A2DD8] text-white text-xs font-semibold rounded-xl transition-all shadow-xs cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5" /> Add Event to Planner
+              </button>
+            </div>
+          ) : (
+            <div className="relative pl-2 space-y-4">
+              <div className="absolute left-[78px] top-4 bottom-4 w-[2px] bg-gray-200"></div>
+              {events.map((item: { startTime: string; title: string; category?: string; platform?: string; priority?: string }, idx: number) => (
+                <div key={idx} className="flex items-center gap-4 relative group">
+                  <span className="w-16 text-right text-xs font-bold text-gray-500 flex-shrink-0">{item.startTime}</span>
+                  <div className="w-2.5 h-2.5 rounded-full bg-[#7B3FF2] z-10 flex-shrink-0 ring-4 ring-white"></div>
+                  <div className="flex-1 p-3.5 rounded-xl border bg-[#F3EEFF]/40 border-gray-100 transition-all">
+                    <h4 className="text-xs font-bold text-gray-900">{item.title}</h4>
+                    {item.category && (
+                      <span className="text-[10px] font-medium text-[#7B3FF2] mt-0.5 inline-block">
+                        {item.category} {item.platform ? `• ${item.platform}` : ''}
+                      </span>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Right Column: Email Summary & Must Do Today (5 cols) */}
@@ -101,41 +166,47 @@ export default function DashboardHome() {
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-heading font-bold text-gray-900 flex items-center gap-2 text-base">
                 <Mail className="w-5 h-5 text-[#7B3FF2]" />
-                Email Summary
+                Email Inbox ({emails.length})
               </h3>
               <Link to="/dashboard/email" className="text-[#7B3FF2] text-xs font-semibold hover:underline flex items-center gap-1">
-                View all emails <ArrowRight className="w-3.5 h-3.5" />
+                View all <ArrowRight className="w-3.5 h-3.5" />
               </Link>
             </div>
 
-            <div className="space-y-3">
-              {[
-                { avatar: "S", avatarBg: "bg-red-100 text-red-600", sender: "Sarah", subject: "Q3 Roadmap", text: "Need roadmap updates before 5 PM.", priority: "HIGH", priorityBg: "bg-red-100 text-red-600", time: "4:30 PM" },
-                { avatar: "D", avatarBg: "bg-orange-100 text-orange-600", sender: "David Chen", subject: "Design Sync Notes", text: "New logo variations approved, prepare...", priority: "MEDIUM", priorityBg: "bg-orange-100 text-orange-600", time: "2:15 PM" },
-                { avatar: "M", avatarBg: "bg-blue-100 text-blue-600", sender: "Marketing Team", subject: "Weekly Newsletter Draft", text: "Draft for newsletter is ready for review.", priority: "LOW", priorityBg: "bg-blue-100 text-blue-600", time: "10:20 AM" },
-              ].map((email, idx) => (
-                <div 
-                  key={idx} 
-                  onClick={() => navigate('/dashboard/email')} 
-                  className="p-3 bg-gray-50/60 hover:bg-[#F3EEFF]/30 rounded-xl border border-gray-100 transition-colors cursor-pointer flex items-start gap-3"
-                >
-                  <div className={`w-8 h-8 rounded-full ${email.avatarBg} flex items-center justify-center font-bold text-xs flex-shrink-0 mt-0.5`}>
-                    {email.avatar}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <h4 className="text-xs font-bold text-gray-900">{email.sender}</h4>
-                      <span className={`text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded ${email.priorityBg}`}>
-                        {email.priority}
-                      </span>
+            {emails.length === 0 ? (
+              <div className="text-center py-6 px-3 bg-gray-50/50 rounded-xl border border-dashed border-gray-200">
+                <Mail className="w-8 h-8 text-gray-300 mx-auto mb-1.5" />
+                <p className="text-xs font-semibold text-gray-600 mb-1">No emails yet</p>
+                <p className="text-[11px] text-gray-400">
+                  Connect your Gmail or click "Fetch emails" in the Email tab.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {emails.slice(0, 3).map((email: { sender: string; initial: string; subject: string; priority?: string; time?: string }, idx: number) => (
+                  <div 
+                    key={idx} 
+                    onClick={() => navigate('/dashboard/email')} 
+                    className="p-3 bg-gray-50/60 hover:bg-[#F3EEFF]/30 rounded-xl border border-gray-100 transition-colors cursor-pointer flex items-start gap-3"
+                  >
+                    <div className="w-8 h-8 rounded-full bg-[#7B3FF2] text-white flex items-center justify-center font-bold text-xs flex-shrink-0 mt-0.5">
+                      {email.initial || email.sender.charAt(0)}
                     </div>
-                    <p className="text-xs font-semibold text-gray-800 truncate">{email.subject}</p>
-                    <p className="text-[11px] text-gray-500 truncate">{email.text}</p>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-xs font-bold text-gray-900">{email.sender}</h4>
+                        {email.priority && (
+                          <span className="text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-purple-100 text-[#7B3FF2]">
+                            {email.priority}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs font-semibold text-gray-800 truncate">{email.subject}</p>
+                    </div>
                   </div>
-                  <span className="text-[10px] text-gray-400 font-medium flex-shrink-0">{email.time}</span>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Must Do Today Card */}
@@ -143,44 +214,49 @@ export default function DashboardHome() {
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-heading font-bold text-gray-900 flex items-center gap-2 text-base">
                 <CheckSquare className="w-5 h-5 text-[#FF7A00]" />
-                Must Do Today
+                Must Do Today ({pendingTasks.length})
               </h3>
             </div>
 
-            <div className="space-y-3">
-              {[
-                { title: "Finalize Marketing Deck", priority: "HIGH", priorityBg: "bg-red-100 text-red-600" },
-                { title: "Approve budget request", priority: "HIGH", priorityBg: "bg-red-100 text-red-600" },
-                { title: "Review candidate profiles", priority: "MEDIUM", priorityBg: "bg-orange-100 text-orange-600" },
-              ].map((task, idx) => (
-                <div key={idx} onClick={() => navigate('/dashboard/tasks')} className="flex items-center justify-between p-2 rounded-xl hover:bg-gray-50 cursor-pointer transition-colors">
-                  <label className="flex items-center gap-3 cursor-pointer">
-                    <input type="checkbox" className="w-4 h-4 rounded border-gray-300 text-[#7B3FF2] focus:ring-[#7B3FF2]" />
-                    <span className="text-xs font-bold text-gray-800">{task.title}</span>
-                  </label>
-                  <span className={`text-[9px] font-extrabold uppercase px-2 py-0.5 rounded ${task.priorityBg}`}>
-                    {task.priority}
-                  </span>
-                </div>
-              ))}
-            </div>
-
-            <button 
-              onClick={() => navigate('/dashboard/tasks')}
-              className="mt-3 text-xs font-bold text-[#7B3FF2] hover:underline cursor-pointer"
-            >
-              +4 remaining tasks
-            </button>
+            {pendingTasks.length === 0 ? (
+              <div className="text-center py-6 px-3 bg-gray-50/50 rounded-xl border border-dashed border-gray-200">
+                <CheckCircle className="w-8 h-8 text-green-500 mx-auto mb-1.5" />
+                <p className="text-xs font-bold text-gray-700 mb-1">All caught up!</p>
+                <p className="text-[11px] text-gray-400 mb-3">No pending tasks remaining.</p>
+                <button
+                  onClick={() => navigate('/dashboard/tasks')}
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-[#FF7A00] hover:underline cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" /> Add Task
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {pendingTasks.slice(0, 4).map((task: { title: string; priority?: string }, idx: number) => (
+                  <div key={idx} onClick={() => navigate('/dashboard/tasks')} className="flex items-center justify-between p-2 rounded-xl hover:bg-gray-50 cursor-pointer transition-colors">
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input type="checkbox" className="w-4 h-4 rounded border-gray-300 text-[#7B3FF2] focus:ring-[#7B3FF2]" readOnly />
+                      <span className="text-xs font-bold text-gray-800">{task.title}</span>
+                    </label>
+                    {task.priority && (
+                      <span className="text-[9px] font-extrabold uppercase px-2 py-0.5 rounded bg-orange-100 text-[#FF7A00]">
+                        {task.priority}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Bottom Section: Analytics Shortcut */}
+      {/* Bottom Section: Real Analytics Summary */}
       <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-xs">
         <div className="flex items-center justify-between mb-6">
           <h3 className="font-heading font-bold text-gray-900 flex items-center gap-2 text-base">
             <BarChart2 className="w-5 h-5 text-[#7B3FF2]" />
-            Analytics Shortcut
+            Your Productivity Summary
           </h3>
           <Link to="/dashboard/analytics" className="text-[#7B3FF2] text-xs font-semibold hover:underline flex items-center gap-1">
             View detailed analytics <ArrowRight className="w-3.5 h-3.5" />
@@ -189,10 +265,10 @@ export default function DashboardHome() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {[
-            { icon: <Clock className="w-5 h-5 text-[#7B3FF2]" />, iconBg: "bg-[#F3EEFF]", label: "Focus Time", value: "4.2h", change: "+8% from yesterday" },
-            { icon: <CheckCircle className="w-5 h-5 text-[#7B3FF2]" />, iconBg: "bg-[#F3EEFF]", label: "Tasks Completed", value: "12", change: "+3 from yesterday" },
-            { icon: <Mail className="w-5 h-5 text-[#7B3FF2]" />, iconBg: "bg-[#F3EEFF]", label: "Emails Cleared", value: "15", change: "+5 from yesterday" },
-            { icon: <Zap className="w-5 h-5 text-[#7B3FF2]" />, iconBg: "bg-[#F3EEFF]", label: "Productivity Score", value: "86%", change: "+6% from yesterday" },
+            { icon: <CheckSquare className="w-5 h-5 text-[#7B3FF2]" />, iconBg: "bg-[#F3EEFF]", label: "Total Tasks", value: `${totalTasks}`, sub: "Created by you" },
+            { icon: <CheckCircle className="w-5 h-5 text-green-600" />, iconBg: "bg-green-50", label: "Completed", value: `${completedTasks}`, sub: totalTasks > 0 ? `${Math.round((completedTasks / totalTasks) * 100)}% completion` : "0% completion" },
+            { icon: <Calendar className="w-5 h-5 text-[#FF7A00]" />, iconBg: "bg-[#FFF3E8]", label: "Scheduled Events", value: `${events.length}`, sub: "In your planner" },
+            { icon: <Zap className="w-5 h-5 text-[#7B3FF2]" />, iconBg: "bg-[#F3EEFF]", label: "Emails", value: `${emails.length}`, sub: "In inbox" },
           ].map((stat, idx) => (
             <div 
               key={idx} 
@@ -205,7 +281,7 @@ export default function DashboardHome() {
               <div>
                 <span className="text-xs font-bold text-gray-500">{stat.label}</span>
                 <h4 className="text-xl font-heading font-extrabold text-gray-900">{stat.value}</h4>
-                <span className="text-[11px] font-semibold text-green-600">{stat.change}</span>
+                <span className="text-[11px] font-semibold text-gray-500">{stat.sub}</span>
               </div>
             </div>
           ))}

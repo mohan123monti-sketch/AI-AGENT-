@@ -1,10 +1,12 @@
 import { useState, FormEvent } from 'react';
 import { motion } from 'motion/react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Sparkles, Calendar, BarChart2, Lightbulb, CheckCircle2, Mail } from 'lucide-react';
+import { Sparkles, Calendar, BarChart2, Lightbulb, CheckCircle2, Mail, AlertCircle } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 export default function RegisterPage() {
   const navigate = useNavigate();
+  const { register } = useAuth();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -13,12 +15,17 @@ export default function RegisterPage() {
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    if (password && confirmPassword && password !== confirmPassword) {
+    if (!fullName.trim() || !email.trim() || !password.trim()) {
+      setError('Please fill in all fields');
+      return;
+    }
+    if (password !== confirmPassword) {
       setError('Passwords do not match');
       return;
     }
-    // Automatically redirect to Login page on registration
-    navigate('/login');
+    setError('');
+    register(fullName.trim(), email.trim());
+    navigate('/dashboard', { replace: true });
   };
 
   return (
@@ -80,7 +87,8 @@ export default function RegisterPage() {
           </div>
           
           {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-600 rounded-xl text-sm font-medium">
+            <div className="mb-4 p-3.5 bg-red-50 border border-red-200 text-red-600 rounded-xl text-xs font-semibold flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
               {error}
             </div>
           )}
