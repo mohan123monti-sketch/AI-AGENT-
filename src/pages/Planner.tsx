@@ -33,10 +33,72 @@ export interface ReminderItem {
 }
 
 export default function Planner() {
-  const [selectedDate, setSelectedDate] = useState<number>(3); // August 3
-  const [selectedDateString, setSelectedDateString] = useState<string>('Mon, Aug 3');
+  const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [viewMode, setViewMode] = useState<'Day' | 'Week' | 'Month' | 'Agenda'>('Day');
   const [agendaFilter, setAgendaFilter] = useState<string>("Today's Agenda");
+
+  // Date format helpers
+  const selectedDateString = currentDate.toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric'
+  });
+
+  const miniHeaderString = currentDate.toLocaleDateString('en-US', {
+    month: 'long',
+    year: 'numeric'
+  });
+
+  // Dynamic Mini Calendar math
+  const currentYear = currentDate.getFullYear();
+  const currentMonth = currentDate.getMonth();
+  const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+  const firstDayOfWeek = new Date(currentYear, currentMonth, 1).getDay();
+  const daysInPrevMonth = new Date(currentYear, currentMonth, 0).getDate();
+
+  const prevMonthDays = Array.from(
+    { length: firstDayOfWeek },
+    (_, i) => daysInPrevMonth - firstDayOfWeek + 1 + i
+  );
+  const monthDays = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+
+  // Navigation Handlers
+  const handlePrevDate = () => {
+    const d = new Date(currentDate);
+    if (viewMode === 'Month') {
+      d.setMonth(d.getMonth() - 1);
+    } else {
+      d.setDate(d.getDate() - 1);
+    }
+    setCurrentDate(d);
+  };
+
+  const handleNextDate = () => {
+    const d = new Date(currentDate);
+    if (viewMode === 'Month') {
+      d.setMonth(d.getMonth() + 1);
+    } else {
+      d.setDate(d.getDate() + 1);
+    }
+    setCurrentDate(d);
+  };
+
+  const handlePrevMonth = () => {
+    const d = new Date(currentDate);
+    d.setMonth(d.getMonth() - 1);
+    setCurrentDate(d);
+  };
+
+  const handleNextMonth = () => {
+    const d = new Date(currentDate);
+    d.setMonth(d.getMonth() + 1);
+    setCurrentDate(d);
+  };
+
+  const handleToday = () => {
+    setCurrentDate(new Date());
+  };
+
 
   // Toast message state
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -271,20 +333,15 @@ export default function Planner() {
           {/* Date Picker Pill */}
           <div className="flex items-center bg-white border border-gray-200 rounded-full px-3 py-1.5 shadow-xs text-xs font-semibold text-gray-700">
             <button 
-              onClick={() => {
-                setSelectedDate(prev => Math.max(1, prev - 1));
-                setSelectedDateString(`Mon, Aug ${selectedDate - 1}`);
-              }}
+              onClick={handlePrevDate}
               className="p-1 text-gray-400 hover:text-gray-900 cursor-pointer"
+              title="Previous"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
             
             <button 
-              onClick={() => {
-                setSelectedDate(3);
-                setSelectedDateString('Mon, Aug 3');
-              }}
+              onClick={handleToday}
               className="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded-full text-xs font-bold text-gray-800 cursor-pointer mx-1"
             >
               Today
@@ -293,11 +350,9 @@ export default function Planner() {
             <span className="px-2 font-bold text-gray-900">{selectedDateString}</span>
 
             <button 
-              onClick={() => {
-                setSelectedDate(prev => Math.min(31, prev + 1));
-                setSelectedDateString(`Mon, Aug ${selectedDate + 1}`);
-              }}
+              onClick={handleNextDate}
               className="p-1 text-gray-400 hover:text-gray-900 cursor-pointer"
+              title="Next"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
@@ -350,7 +405,25 @@ export default function Planner() {
           
           {/* Mini Calendar Card */}
           <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm space-y-4">
-            <h3 className="font-heading font-bold text-sm text-gray-900">Monday, Aug 3</h3>
+            <div className="flex items-center justify-between">
+              <h3 className="font-heading font-bold text-sm text-gray-900">{miniHeaderString}</h3>
+              <div className="flex items-center gap-1">
+                <button 
+                  onClick={handlePrevMonth} 
+                  className="p-1 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-gray-900 transition-colors cursor-pointer"
+                  title="Previous Month"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <button 
+                  onClick={handleNextMonth} 
+                  className="p-1 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-gray-900 transition-colors cursor-pointer"
+                  title="Next Month"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
 
             {/* Days of Week Headers */}
             <div className="grid grid-cols-7 text-center text-[11px] font-bold text-gray-400">
@@ -359,43 +432,33 @@ export default function Planner() {
 
             {/* Calendar Dates Grid */}
             <div className="grid grid-cols-7 text-center text-xs font-semibold gap-y-2">
-              {/* Previous Month trailing dates */}
-              <span className="text-gray-300">28</span>
-              <span className="text-gray-300">29</span>
-              <span className="text-gray-300">30</span>
-              <span className="text-gray-300">31</span>
-              
-              {/* August dates */}
-              <span className="text-gray-700">1</span>
-              <span className="text-gray-700">2</span>
-              
-              {/* Selected Active Date (3) */}
-              <div className="flex justify-center">
-                <button 
-                  onClick={() => setSelectedDate(3)}
-                  className="w-7 h-7 rounded-full bg-[#7B3FF2] text-white font-bold text-xs flex items-center justify-center shadow-xs cursor-pointer"
-                >
-                  3
-                </button>
-              </div>
-
-              {[4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31].map(day => (
-                <div key={day} className="flex justify-center">
-                  <button 
-                    onClick={() => {
-                      setSelectedDate(day);
-                      setSelectedDateString(`Mon, Aug ${day}`);
-                    }}
-                    className={`w-7 h-7 rounded-full flex items-center justify-center cursor-pointer transition-colors ${
-                      selectedDate === day 
-                        ? 'bg-[#7B3FF2] text-white font-bold' 
-                        : 'text-gray-700 hover:bg-gray-100'
-                    }`}
-                  >
-                    {day}
-                  </button>
-                </div>
+              {/* Trailing days from previous month */}
+              {prevMonthDays.map((day, idx) => (
+                <span key={`prev-${idx}`} className="text-gray-300 py-1">{day}</span>
               ))}
+              
+              {/* Days for active month */}
+              {monthDays.map(day => {
+                const isSelected = currentDate.getDate() === day;
+                return (
+                  <div key={day} className="flex justify-center">
+                    <button 
+                      onClick={() => {
+                        const d = new Date(currentDate);
+                        d.setDate(day);
+                        setCurrentDate(d);
+                      }}
+                      className={`w-7 h-7 rounded-full flex items-center justify-center cursor-pointer transition-colors ${
+                        isSelected 
+                          ? 'bg-[#7B3FF2] text-white font-bold shadow-xs' 
+                          : 'text-gray-700 hover:bg-gray-100'
+                      }`}
+                    >
+                      {day}
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
