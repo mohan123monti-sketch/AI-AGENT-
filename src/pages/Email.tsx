@@ -65,31 +65,38 @@ export default function Email() {
   }, [emails]);
 
   // ── Load real emails from the workflow on mount ──────────────────────────
-  useEffect(() => {
-    const loadEmails = async () => {
-      setIsLoadingEmails(true);
-      const res = await emailApi.fetchEmails(100);
-      setIsLoadingEmails(false);
+  const handleFetchEmails = async () => {
+    setIsLoadingEmails(true);
+    const res = await emailApi.fetchEmails(100);
+    setIsLoadingEmails(false);
 
-      if (res.underConstruction) {
-        setApiStatus('under-construction');
-        // Keep using the mock data already in state
-        return;
-      }
-      if (res.success && Array.isArray(res.data)) {
-        setApiStatus('loaded');
-        // Map workflow response to EmailItem shape.
-        // The workflow returns Gemini/Anthropic-summarized email data.
-        // We merge it on top of our mock data structure.
-        setEmails(prev => {
-          const fromApi = (res.data as EmailItem[]);
-          return fromApi.length > 0 ? fromApi : prev;
-        });
+    if (res.underConstruction) {
+      setApiStatus('under-construction');
+      showToast('Webhook under construction — check WEBHOOK_URL in .env');
+      return;
+    }
+
+    if (res.success && res.data) {
+      setApiStatus('loaded');
+      const payload = res.data as { emails?: EmailItem[]; data?: EmailItem[]; result?: EmailItem[] } | EmailItem[];
+      const fetchedList = Array.isArray(payload) 
+        ? payload 
+        : (payload.emails || payload.data || payload.result || []);
+      
+      if (fetchedList.length > 0) {
+        setEmails(fetchedList);
+        showToast(`Fetched ${fetchedList.length} emails via AI workflow!`);
       } else {
-        setApiStatus('error');
+        showToast('Webhook triggered! Check Agent Builder canvas output.');
       }
-    };
-    loadEmails();
+    } else {
+      setApiStatus('error');
+      showToast(res.error || 'Failed to fetch emails from webhook');
+    }
+  };
+
+  useEffect(() => {
+    handleFetchEmails();
   }, []);
 
   const showToast = (msg: string) => {
@@ -224,21 +231,32 @@ export default function Email() {
         <div>
           <h1 className="text-2xl font-heading font-bold text-gray-900">Email Assistant</h1>
           <p className="text-gray-500 text-xs mt-1">
-            AI summaries, action items, follow-ups, and smart replies — all in one place.
+            AI summaries, action items, follow-ups, and smart replies — powered by Agent Builder.
           </p>
         </div>
 
-        <button 
-          onClick={() => setShowArchived(!showArchived)}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold border transition-all cursor-pointer shadow-xs ${
-            showArchived 
-              ? 'bg-gray-900 text-white border-gray-900' 
-              : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
-          }`}
-        >
-          <Archive className="w-3.5 h-3.5" />
-          {showArchived ? 'View Inbox' : 'View Archive'}
-        </button>
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={handleFetchEmails}
+            disabled={isLoadingEmails}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-[#7B3FF2] hover:bg-[#5A2DD8] text-white transition-all cursor-pointer shadow-md shadow-[#7B3FF2]/20 disabled:opacity-50"
+          >
+            <Sparkles className={`w-3.5 h-3.5 ${isLoadingEmails ? 'animate-spin' : ''}`} />
+            {isLoadingEmails ? 'Fetching Emails...' : 'Sync & Fetch Emails (AI)'}
+          </button>
+
+          <button 
+            onClick={() => setShowArchived(!showArchived)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold border transition-all cursor-pointer shadow-xs ${
+              showArchived 
+                ? 'bg-gray-900 text-white border-gray-900' 
+                : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+            }`}
+          >
+            <Archive className="w-3.5 h-3.5" />
+            {showArchived ? 'View Inbox' : 'View Archive'}
+          </button>
+        </div>
       </div>
 
       {/* Main 2-Column Content Workspace */}
