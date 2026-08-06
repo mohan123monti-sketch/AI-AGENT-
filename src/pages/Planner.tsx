@@ -118,43 +118,14 @@ export default function Planner() {
     setTimeout(() => setToastMessage(null), 3000);
   };
 
-  const PLANNER_EVENTS_KEY = 'planai_user_events';
-  const PLANNER_REMINDERS_KEY = 'planai_user_reminders';
+  const [events, setEvents] = useState<PlannerEvent[]>([]);
+  const [reminders, setReminders] = useState<ReminderItem[]>([]);
 
-  // Real User Events
-  const [events, setEvents] = useState<PlannerEvent[]>(() => {
-    try {
-      const saved = localStorage.getItem(PLANNER_EVENTS_KEY);
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
-
-  // Real User Reminders
-  const [reminders, setReminders] = useState<ReminderItem[]>(() => {
-    try {
-      const saved = localStorage.getItem(PLANNER_REMINDERS_KEY);
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
-
-  // Persist locally
-  useEffect(() => {
-    localStorage.setItem(PLANNER_EVENTS_KEY, JSON.stringify(events));
-  }, [events]);
-
-  useEffect(() => {
-    localStorage.setItem(PLANNER_REMINDERS_KEY, JSON.stringify(reminders));
-  }, [reminders]);
-
-  // Load events from the workflow on mount (Google Calendar or MongoDB) if available
+  // Load events from the live workflow on mount
   useEffect(() => {
     const loadEvents = async () => {
       const res = await plannerApi.fetchEvents();
-      if (res.success && Array.isArray(res.data) && res.data.length > 0) {
+      if (res.success && Array.isArray(res.data)) {
         setEvents(res.data as PlannerEvent[]);
       }
     };

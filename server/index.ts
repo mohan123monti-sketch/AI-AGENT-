@@ -3,7 +3,13 @@ import express, { Request, Response, NextFunction } from 'express';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
-const WEBHOOK_URL = process.env.WEBHOOK_URL || '';
+const WEBHOOK_URLS = {
+  dailyPlanner: process.env.WEBHOOK_URL_DAILY_PLANNER || '',
+  meetingSchedule: process.env.WEBHOOK_URL_MEETING_SCHEDULE || '',
+  emailAssist: process.env.WEBHOOK_URL_EMAIL_ASSIST || '',
+};
+const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL || 'http://localhost:11434';
+const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'llama3.2:1b';
 
 // ─── Middleware ──────────────────────────────────────────────────────────────
 app.use(express.json());
@@ -27,13 +33,13 @@ app.use((req: Request, res: Response, next: NextFunction) => {
  * Checks if the webhook URL is configured. Returns false and sends a 503
  * with a clear "under construction" message if not configured.
  */
-function ensureWebhookConfigured(res: Response): boolean {
-  if (!WEBHOOK_URL || WEBHOOK_URL.includes('REPLACE_WITH_YOUR_PLATFORM')) {
+function ensureWebhookConfigured(res: Response, url: string): boolean {
+  if (!url || url.includes('REPLACE_WITH_')) {
     res.status(503).json({
       success: false,
       underConstruction: true,
       message:
-        '🚧 Workflow webhook is under construction. Set WEBHOOK_URL in .env to activate the backend integration.',
+        '🚧 This workflow webhook is under construction. Set the appropriate WEBHOOK_URL in .env to activate the backend integration.',
     });
     return false;
   }
@@ -44,31 +50,79 @@ function ensureWebhookConfigured(res: Response): boolean {
  * Generic helper to POST to the Agent Builder webhook.
  * Sends the payload as JSON and returns the parsed response.
  */
-async function callWebhook(payload: Record<string, unknown>) {
-  const response = await fetch(WEBHOOK_URL, {
+async function callWebhook(url: string, payload: Record<string, unknown>) {
+  const response = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
 
   const text = await response.text();
-  let data: unknown;
+  let data: any;
   try {
     data = JSON.parse(text);
   } catch {
     data = { raw: text };
   }
-  return { status: response.status, data };
+  return { status: response.status, data, success: response.ok };
+}
+
+/**
+ * Helper to call local Ollama chat API.
+ */
+async function callOllama(messages: { role: string, content: string }[]) {
+  try {
+    const response = await fetch(`${OLLAMA_BASE_URL}/api/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: OLLAMA_MODEL,
+        messages,
+        stream: false,
+      }),
+    });
+    const data = await response.json();
+    return { status: response.status, data: { reply: data.message?.content || '' } };
+  } catch (err) {
+    return { status: 500, data: { error: 'Failed to connect to local Ollama.', details: String(err) } };
+  }
+}
+
+/**
+ * Helper to call local Ollama generate API.
+ */
+async function callOllamaGenerate(prompt: string) {
+  try {
+    const response = await fetch(`${OLLAMA_BASE_URL}/api/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: OLLAMA_MODEL,
+        prompt,
+        stream: false,
+      }),
+    });
+    const data = await response.json();
+    return { status: response.status, data: { reply: data.response || '' } };
+  } catch (err) {
+    return { status: 500, data: { error: 'Failed to connect to local Ollama.', details: String(err) } };
+  }
 }
 
 // ─── Health Check ─────────────────────────────────────────────────────────────
 app.get('/api/health', (_req: Request, res: Response) => {
-  const webhookConfigured =
-    Boolean(WEBHOOK_URL) && !WEBHOOK_URL.includes('REPLACE_WITH_YOUR_PLATFORM');
+  const checkUrl = (url: string) => Boolean(url) && !url.includes('REPLACE_WITH_');
   res.json({
     status: 'ok',
-    webhookConfigured,
-    webhookUrl: webhookConfigured ? WEBHOOK_URL : 'NOT_CONFIGURED',
+    webhooksConfigured: {
+      dailyPlanner: checkUrl(WEBHOOK_URLS.dailyPlanner),
+      meetingSchedule: checkUrl(WEBHOOK_URLS.meetingSchedule),
+      emailAssist: checkUrl(WEBHOOK_URLS.emailAssist),
+    },
+    ollama: {
+      baseUrl: OLLAMA_BASE_URL,
+      model: OLLAMA_MODEL
+    },
     timestamp: new Date().toISOString(),
   });
 });
@@ -81,16 +135,17 @@ app.get('/api/health', (_req: Request, res: Response) => {
  * The workflow: Webhook → Gmail List → Gemini/Anthropic → MongoDB → Response
  */
 app.get('/api/emails', async (req: Request, res: Response) => {
-  if (!ensureWebhookConfigured(res)) return;
+  const targetUrl = WEBHOOK_URLS.emailAssist;
+  if (!ensureWebhookConfigured(res, targetUrl)) return;
 
   try {
-    const { status, data } = await callWebhook({
+    const { status, data, success } = await callWebhook(targetUrl, {
       action: 'fetch_emails',
       limit: Number(req.query.limit) || 100,
       sessionId: req.headers['x-session-id'] || 'default',
     });
 
-    res.status(status).json({ success: true, data });
+    res.status(status).json({ success, data, error: success ? undefined : data?.error || 'Webhook failed' });
   } catch (err) {
     console.error('[/api/emails]', err);
     res.status(500).json({ success: false, error: String(err) });
@@ -103,11 +158,12 @@ app.get('/api/emails', async (req: Request, res: Response) => {
  * Body: { emailId, to, subject, tone, replyText, send: boolean }
  */
 app.post('/api/emails/reply', async (req: Request, res: Response) => {
-  if (!ensureWebhookConfigured(res)) return;
+  const targetUrl = WEBHOOK_URLS.emailAssist;
+  if (!ensureWebhookConfigured(res, targetUrl)) return;
 
   try {
     const { emailId, to, subject, tone, replyText, send = false } = req.body;
-    const { status, data } = await callWebhook({
+    const { status, data, success } = await callWebhook(targetUrl, {
       action: 'generate_reply',
       emailId,
       to,
@@ -118,7 +174,7 @@ app.post('/api/emails/reply', async (req: Request, res: Response) => {
       sessionId: req.headers['x-session-id'] || 'default',
     });
 
-    res.status(status).json({ success: true, data });
+    res.status(status).json({ success, data, error: success ? undefined : data?.error || 'Webhook failed' });
   } catch (err) {
     console.error('[/api/emails/reply]', err);
     res.status(500).json({ success: false, error: String(err) });
@@ -131,18 +187,19 @@ app.post('/api/emails/reply', async (req: Request, res: Response) => {
  * Body: { emailId, archived: boolean }
  */
 app.post('/api/emails/archive', async (req: Request, res: Response) => {
-  if (!ensureWebhookConfigured(res)) return;
+  const targetUrl = WEBHOOK_URLS.emailAssist;
+  if (!ensureWebhookConfigured(res, targetUrl)) return;
 
   try {
     const { emailId, archived } = req.body;
-    const { status, data } = await callWebhook({
+    const { status, data, success } = await callWebhook(targetUrl, {
       action: 'archive_email',
       emailId,
       archived,
       sessionId: req.headers['x-session-id'] || 'default',
     });
 
-    res.status(status).json({ success: true, data });
+    res.status(status).json({ success, data, error: success ? undefined : data?.error || 'Webhook failed' });
   } catch (err) {
     console.error('[/api/emails/archive]', err);
     res.status(500).json({ success: false, error: String(err) });
@@ -158,18 +215,39 @@ app.post('/api/emails/archive', async (req: Request, res: Response) => {
  * Body: { message, sessionId?, history? }
  */
 app.post('/api/chat', async (req: Request, res: Response) => {
-  if (!ensureWebhookConfigured(res)) return;
-
   try {
-    const { message, sessionId, history = [] } = req.body;
-    const { status, data } = await callWebhook({
-      action: 'chat',
-      message,
-      history,
-      sessionId: sessionId || req.headers['x-session-id'] || 'default',
-      timestamp: new Date().toISOString(),
-    });
+    const { message, history = [] } = req.body;
+    
+    const SYSTEM_PROMPT = {
+      role: 'system',
+      content: `You are the PlanAI Assistant, an expert AI Productivity Coach for the custom Plan-AI platform. Your ONLY purpose is to help the user with the platform's features. Do NOT answer questions outside of this scope (e.g. general knowledge, coding).
 
+KNOWLEDGE BASE - HOW PLAN-AI WORKS:
+1. Dashboard: The main hub (/dashboard). Shows a greeting, Today's Optimized Plan (calendar), Email Inbox summary, Must Do Today (tasks), and Productivity Summary metrics at the bottom.
+2. Tasks (/dashboard/tasks): Users manage to-dos here. 
+   - To add a task, click the orange 'New Task' button in the top right. 
+   - Tasks have Categories (Marketing, Finance, Sales, Business, Engineering), Priorities (High, Medium, Low), and Statuses (To Do, In Progress, Completed).
+   - The view has tabs: Today's Tasks, Carry Forward, Upcoming, and Completed.
+3. Planner (/dashboard/planner): A calendar view for managing meetings and events. Users can click 'Add Event' to schedule things.
+4. Email Assist (/dashboard/email): A tool to manage your inbox. Users can fetch emails, read AI summaries, generate AI replies, and archive emails directly from the platform.
+5. Analytics & Notes: Other tools available in the sidebar for deeper productivity tracking and note-taking.
+
+If asked how to do something, use this knowledge base to give specific instructions (e.g., "Click the orange 'New Task' button"). Be polite, concise, and stay in character as a helpful productivity coach.`
+    };
+    
+    // Map history to Ollama format and prepend the system prompt
+    const messages = [
+      SYSTEM_PROMPT,
+      ...history.map((msg: any) => ({
+        role: msg.role === 'user' ? 'user' : 'assistant',
+        content: msg.content
+      }))
+    ];
+    
+    // Add the current message
+    messages.push({ role: 'user', content: message });
+
+    const { status, data } = await callOllama(messages);
     res.status(status).json({ success: true, data });
   } catch (err) {
     console.error('[/api/chat]', err);
@@ -184,15 +262,16 @@ app.post('/api/chat', async (req: Request, res: Response) => {
  * Fetches tasks from MongoDB via the workflow.
  */
 app.get('/api/tasks', async (req: Request, res: Response) => {
-  if (!ensureWebhookConfigured(res)) return;
+  const targetUrl = WEBHOOK_URLS.dailyPlanner;
+  if (!ensureWebhookConfigured(res, targetUrl)) return;
 
   try {
-    const { status, data } = await callWebhook({
+    const { status, data, success } = await callWebhook(targetUrl, {
       action: 'fetch_tasks',
       sessionId: req.headers['x-session-id'] || 'default',
     });
 
-    res.status(status).json({ success: true, data });
+    res.status(status).json({ success, data, error: success ? undefined : data?.error || 'Webhook failed' });
   } catch (err) {
     console.error('[/api/tasks]', err);
     res.status(500).json({ success: false, error: String(err) });
@@ -205,16 +284,17 @@ app.get('/api/tasks', async (req: Request, res: Response) => {
  * Body: task object
  */
 app.post('/api/tasks', async (req: Request, res: Response) => {
-  if (!ensureWebhookConfigured(res)) return;
+  const targetUrl = WEBHOOK_URLS.dailyPlanner;
+  if (!ensureWebhookConfigured(res, targetUrl)) return;
 
   try {
-    const { status, data } = await callWebhook({
+    const { status, data, success } = await callWebhook(targetUrl, {
       action: 'upsert_task',
       task: req.body,
       sessionId: req.headers['x-session-id'] || 'default',
     });
 
-    res.status(status).json({ success: true, data });
+    res.status(status).json({ success, data, error: success ? undefined : data?.error || 'Webhook failed' });
   } catch (err) {
     console.error('[/api/tasks]', err);
     res.status(500).json({ success: false, error: String(err) });
@@ -226,16 +306,17 @@ app.post('/api/tasks', async (req: Request, res: Response) => {
  * Deletes a task from MongoDB via the workflow.
  */
 app.delete('/api/tasks/:id', async (req: Request, res: Response) => {
-  if (!ensureWebhookConfigured(res)) return;
+  const targetUrl = WEBHOOK_URLS.dailyPlanner;
+  if (!ensureWebhookConfigured(res, targetUrl)) return;
 
   try {
-    const { status, data } = await callWebhook({
+    const { status, data, success } = await callWebhook(targetUrl, {
       action: 'delete_task',
       taskId: req.params.id,
       sessionId: req.headers['x-session-id'] || 'default',
     });
 
-    res.status(status).json({ success: true, data });
+    res.status(status).json({ success, data, error: success ? undefined : data?.error || 'Webhook failed' });
   } catch (err) {
     console.error('[/api/tasks/:id DELETE]', err);
     res.status(500).json({ success: false, error: String(err) });
@@ -251,18 +332,19 @@ app.delete('/api/tasks/:id', async (req: Request, res: Response) => {
  * Query params: ?start=ISO&end=ISO
  */
 app.get('/api/planner', async (req: Request, res: Response) => {
-  if (!ensureWebhookConfigured(res)) return;
+  const targetUrl = WEBHOOK_URLS.meetingSchedule;
+  if (!ensureWebhookConfigured(res, targetUrl)) return;
 
   try {
     const { start, end } = req.query;
-    const { status, data } = await callWebhook({
+    const { status, data, success } = await callWebhook(targetUrl, {
       action: 'fetch_calendar',
       start: start || new Date().toISOString(),
       end: end || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
       sessionId: req.headers['x-session-id'] || 'default',
     });
 
-    res.status(status).json({ success: true, data });
+    res.status(status).json({ success, data, error: success ? undefined : data?.error || 'Webhook failed' });
   } catch (err) {
     console.error('[/api/planner]', err);
     res.status(500).json({ success: false, error: String(err) });
@@ -274,16 +356,17 @@ app.get('/api/planner', async (req: Request, res: Response) => {
  * Creates or updates a planner event via the workflow.
  */
 app.post('/api/planner/event', async (req: Request, res: Response) => {
-  if (!ensureWebhookConfigured(res)) return;
+  const targetUrl = WEBHOOK_URLS.meetingSchedule;
+  if (!ensureWebhookConfigured(res, targetUrl)) return;
 
   try {
-    const { status, data } = await callWebhook({
+    const { status, data, success } = await callWebhook(targetUrl, {
       action: 'upsert_event',
       event: req.body,
       sessionId: req.headers['x-session-id'] || 'default',
     });
 
-    res.status(status).json({ success: true, data });
+    res.status(status).json({ success, data, error: success ? undefined : data?.error || 'Webhook failed' });
   } catch (err) {
     console.error('[/api/planner/event]', err);
     res.status(500).json({ success: false, error: String(err) });
@@ -295,16 +378,17 @@ app.post('/api/planner/event', async (req: Request, res: Response) => {
  * Deletes a planner event.
  */
 app.delete('/api/planner/event/:id', async (req: Request, res: Response) => {
-  if (!ensureWebhookConfigured(res)) return;
+  const targetUrl = WEBHOOK_URLS.meetingSchedule;
+  if (!ensureWebhookConfigured(res, targetUrl)) return;
 
   try {
-    const { status, data } = await callWebhook({
+    const { status, data, success } = await callWebhook(targetUrl, {
       action: 'delete_event',
       eventId: req.params.id,
       sessionId: req.headers['x-session-id'] || 'default',
     });
 
-    res.status(status).json({ success: true, data });
+    res.status(status).json({ success, data, error: success ? undefined : data?.error || 'Webhook failed' });
   } catch (err) {
     console.error('[/api/planner/event/:id DELETE]', err);
     res.status(500).json({ success: false, error: String(err) });
@@ -319,15 +403,16 @@ app.delete('/api/planner/event/:id', async (req: Request, res: Response) => {
  * from MongoDB via the workflow.
  */
 app.get('/api/dashboard', async (req: Request, res: Response) => {
-  if (!ensureWebhookConfigured(res)) return;
+  const targetUrl = WEBHOOK_URLS.dailyPlanner;
+  if (!ensureWebhookConfigured(res, targetUrl)) return;
 
   try {
-    const { status, data } = await callWebhook({
+    const { status, data, success } = await callWebhook(targetUrl, {
       action: 'fetch_dashboard',
       sessionId: req.headers['x-session-id'] || 'default',
     });
 
-    res.status(status).json({ success: true, data });
+    res.status(status).json({ success, data, error: success ? undefined : data?.error || 'Webhook failed' });
   } catch (err) {
     console.error('[/api/dashboard]', err);
     res.status(500).json({ success: false, error: String(err) });
@@ -342,10 +427,9 @@ app.get('/api/dashboard', async (req: Request, res: Response) => {
  * Use for any custom action not covered by the specific routes above.
  */
 app.post('/api/agent', async (req: Request, res: Response) => {
-  if (!ensureWebhookConfigured(res)) return;
-
   try {
-    const { status, data } = await callWebhook(req.body);
+    const prompt = req.body.prompt || JSON.stringify(req.body);
+    const { status, data } = await callOllamaGenerate(prompt);
     res.status(status).json({ success: true, data });
   } catch (err) {
     console.error('[/api/agent]', err);
@@ -355,19 +439,19 @@ app.post('/api/agent', async (req: Request, res: Response) => {
 
 // ─── Start Server ─────────────────────────────────────────────────────────────
 app.listen(PORT, () => {
-  const webhookConfigured =
-    Boolean(WEBHOOK_URL) && !WEBHOOK_URL.includes('REPLACE_WITH_YOUR_PLATFORM');
-
   console.log('');
   console.log('╔══════════════════════════════════════════╗');
   console.log('║         Plan-AI Backend Server            ║');
   console.log('╚══════════════════════════════════════════╝');
   console.log(`  ▶  Listening on http://localhost:${PORT}`);
-  console.log(
-    `  📡 Webhook: ${
-      webhookConfigured ? `✅ ${WEBHOOK_URL}` : '🚧 NOT CONFIGURED (Under Construction)'
-    }`
-  );
+  console.log('  📡 Webhooks:');
+  const checkUrl = (url: string) => Boolean(url) && !url.includes('REPLACE_WITH_');
+  console.log(`    - Daily Planner:   ${checkUrl(WEBHOOK_URLS.dailyPlanner) ? '✅ configured' : '🚧 placeholder'}`);
+  console.log(`    - Meeting Sched:   ${checkUrl(WEBHOOK_URLS.meetingSchedule) ? '✅ configured' : '🚧 placeholder'}`);
+  console.log(`    - Email Assist:    ${checkUrl(WEBHOOK_URLS.emailAssist) ? '✅ configured' : '🚧 placeholder'}`);
+  console.log(`  🤖 Local AI (Ollama):`);
+  console.log(`    - URL:             ✅ ${OLLAMA_BASE_URL}`);
+  console.log(`    - Model:           ✅ ${OLLAMA_MODEL}`);
   console.log('');
   console.log('  Available API Endpoints:');
   console.log('  GET  /api/health');

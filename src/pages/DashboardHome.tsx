@@ -7,54 +7,27 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
+import { dashboardApi } from '../lib/api';
+
 export default function DashboardHome() {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  // Read real user data from localStorage
-  const [tasks, setTasks] = useState(() => {
-    try {
-      const saved = localStorage.getItem('planai_user_tasks');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
+  const [tasks, setTasks] = useState<any[]>([]);
+  const [events, setEvents] = useState<any[]>([]);
+  const [emails, setEmails] = useState<any[]>([]);
 
-  const [events, setEvents] = useState(() => {
-    try {
-      const saved = localStorage.getItem('planai_user_events');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
-
-  const [emails, setEmails] = useState(() => {
-    try {
-      const saved = localStorage.getItem('planai_user_emails');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
-
-  // Re-sync if localStorage updates
   useEffect(() => {
-    const handleStorageChange = () => {
-      try {
-        const savedTasks = localStorage.getItem('planai_user_tasks');
-        if (savedTasks) setTasks(JSON.parse(savedTasks));
-        const savedEvents = localStorage.getItem('planai_user_events');
-        if (savedEvents) setEvents(JSON.parse(savedEvents));
-        const savedEmails = localStorage.getItem('planai_user_emails');
-        if (savedEmails) setEmails(JSON.parse(savedEmails));
-      } catch {
-        // ignore
+    const loadDashboard = async () => {
+      const res = await dashboardApi.fetchSummary();
+      if (res.success && res.data) {
+        const data: any = res.data;
+        if (data.tasks) setTasks(data.tasks);
+        if (data.events) setEvents(data.events);
+        if (data.emails) setEmails(data.emails);
       }
     };
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
+    loadDashboard();
   }, []);
 
   const totalTasks = tasks.length;
