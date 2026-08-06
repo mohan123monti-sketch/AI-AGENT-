@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import GlobalAiDrawer from '../components/GlobalAiDrawer';
 import { useAuth } from '../context/AuthContext';
+import { getUserNotifications } from '../lib/userData';
 
 export default function DashboardLayout() {
   const { user, logout } = useAuth();
@@ -23,12 +24,7 @@ export default function DashboardLayout() {
     { to: "/dashboard/notes", icon: <FileText className="w-5 h-5" />, label: "Notes" },
   ];
 
-  const notifications = [
-    { id: 1, title: "Upcoming Deadline", desc: "Q3 Marketing Deck due today at 5:00 PM", time: "10 mins ago", type: "urgent" },
-    { id: 2, title: "Carried Forward Task", desc: "Security Audit carried forward to today", time: "1 hour ago", type: "task" },
-    { id: 3, title: "Unread Email Action Required", desc: "Sarah Jenkins requested budget update", time: "2 hours ago", type: "email" },
-    { id: 4, title: "Planner Update", desc: "AI optimized 3 focus blocks for your morning schedule", time: "3 hours ago", type: "ai" },
-  ];
+  const notifications = getUserNotifications();
 
   return (
     <div className="flex h-screen bg-[#F8F9FC] font-sans overflow-hidden selection:bg-[#7B3FF2]/20 selection:text-[#7B3FF2]">
@@ -117,21 +113,7 @@ export default function DashboardLayout() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col h-full min-w-0 bg-[#F8F9FC] relative">
         {/* Top Header */}
-        <header className="h-20 bg-white border-b border-gray-100 flex items-center justify-between px-8 flex-shrink-0 z-10 sticky top-0">
-          {/* Top Search Input */}
-          <div className="flex-1 max-w-lg">
-            <div className="relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-              </span>
-              <input 
-                type="text" 
-                placeholder="Search emails, senders, or summaries..." 
-                className="w-full pl-11 pr-4 py-2.5 bg-[#F8F9FC] border border-gray-100 rounded-full text-xs text-gray-700 placeholder:text-gray-400 focus:outline-none focus:bg-white focus:border-[#7B3FF2]/40 focus:ring-2 focus:ring-[#7B3FF2]/10 transition-all"
-              />
-            </div>
-          </div>
-
+        <header className="h-20 bg-white border-b border-gray-100 flex items-center justify-end px-8 flex-shrink-0 z-10 sticky top-0">
           <div className="flex items-center gap-4">
             {/* Notifications Bell */}
             <div className="relative">
@@ -155,17 +137,23 @@ export default function DashboardLayout() {
                     </button>
                   </div>
 
-                  <div className="space-y-2.5 max-h-72 overflow-y-auto">
-                    {notifications.map((n) => (
-                      <div key={n.id} className="p-3 bg-gray-50 hover:bg-[#F3EEFF]/40 rounded-xl border border-gray-100 transition-colors text-xs">
-                        <div className="flex items-center justify-between font-bold text-gray-900 mb-1">
-                          <span>{n.title}</span>
-                          <span className="text-[10px] text-gray-400 font-normal">{n.time}</span>
+                  {notifications.length === 0 ? (
+                    <div className="text-center py-6 text-xs text-gray-400 font-medium">
+                      No new notifications at this time.
+                    </div>
+                  ) : (
+                    <div className="space-y-2.5 max-h-72 overflow-y-auto">
+                      {notifications.map((n) => (
+                        <div key={n.id} className="p-3 bg-gray-50 hover:bg-[#F3EEFF]/40 rounded-xl border border-gray-100 transition-colors text-xs">
+                          <div className="flex items-center justify-between font-bold text-gray-900 mb-1">
+                            <span>{n.title}</span>
+                            <span className="text-[10px] text-gray-400 font-normal">{n.time}</span>
+                          </div>
+                          <p className="text-gray-600 leading-snug">{n.desc}</p>
                         </div>
-                        <p className="text-gray-600 leading-snug">{n.desc}</p>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </div>

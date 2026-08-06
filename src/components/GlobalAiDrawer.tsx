@@ -5,6 +5,7 @@ import {
   AlertCircle, ArrowRight, Zap, RefreshCw, Bot, MessageSquare
 } from 'lucide-react';
 import { chatApi } from '../lib/api';
+import { hasUserData, generateUserRecommendations } from '../lib/userData';
 
 interface Message {
   id: number;
@@ -27,16 +28,8 @@ export default function GlobalAiDrawer({ isOpen, onClose }: { isOpen: boolean; o
   const [isListening, setIsListening] = useState(false);
   const [activeTab, setActiveTab] = useState<'chat' | 'recommendations'>('recommendations');
 
-  const recommendations = [
-    { id: 1, title: "High-Priority Alert", desc: "You have three high-priority tasks due today.", tag: "Urgent", color: "bg-red-50 text-red-700 border-red-200" },
-    { id: 2, title: "Deadline Reminder", desc: "Complete your Design Report before 4 PM.", tag: "Deadline", color: "bg-orange-50 text-orange-700 border-orange-200" },
-    { id: 3, title: "Inactivity Prompt", desc: "You have been inactive for 45 minutes. Consider starting a deep focus session.", tag: "Focus", color: "bg-purple-50 text-[#7B3FF2] border-purple-200" },
-    { id: 4, title: "Schedule Optimization", desc: "Move Task B to tomorrow because today's schedule is full.", tag: "AI Suggestion", color: "bg-blue-50 text-blue-700 border-blue-200" },
-    { id: 5, title: "Upcoming Alerts", desc: "Two reminders are due in the next hour.", tag: "Reminders", color: "bg-amber-50 text-amber-700 border-amber-200" },
-    { id: 6, title: "Inbox Action Items", desc: "You have 3 unread emails requiring immediate action.", tag: "Email", color: "bg-indigo-50 text-indigo-700 border-indigo-200" },
-    { id: 7, title: "Peak Flow Hours", desc: "Your productivity is highest between 9 AM and 12 PM.", tag: "Insight", color: "bg-green-50 text-green-700 border-green-200" },
-    { id: 8, title: "Daily Progress", desc: "You have completed 80% of today's planned tasks! Great job.", tag: "Achievement", color: "bg-emerald-50 text-emerald-700 border-emerald-200" }
-  ];
+  const userHasData = hasUserData();
+  const recommendations = userHasData ? generateUserRecommendations() : [];
 
   const suggestedPrompts = [
     "Analyze my day",
@@ -198,24 +191,36 @@ export default function GlobalAiDrawer({ isOpen, onClose }: { isOpen: boolean; o
                     Live Productivity Insights ({recommendations.length})
                   </h4>
 
-                  <div className="space-y-3">
-                    {recommendations.map((rec) => (
-                      <motion.div
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        key={rec.id}
-                        className={`p-4 rounded-2xl border ${rec.color} transition-all hover:shadow-sm`}
-                      >
-                        <div className="flex justify-between items-center mb-1.5">
-                          <h5 className="font-bold text-xs">{rec.title}</h5>
-                          <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-white/80 border border-current">
-                            {rec.tag}
-                          </span>
-                        </div>
-                        <p className="text-xs font-medium leading-relaxed">{rec.desc}</p>
-                      </motion.div>
-                    ))}
-                  </div>
+                  {recommendations.length === 0 ? (
+                    <div className="p-6 bg-purple-50/60 border border-purple-100 rounded-2xl text-center space-y-3">
+                      <div className="w-12 h-12 rounded-2xl bg-purple-100 text-[#7B3FF2] mx-auto flex items-center justify-center">
+                        <Lightbulb className="w-6 h-6" />
+                      </div>
+                      <h5 className="font-bold text-sm text-gray-900">No Recommendations Available</h5>
+                      <p className="text-xs text-gray-500 leading-relaxed">
+                        Add tasks, schedule calendar events, or connect your email to receive personalized AI productivity insights.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {recommendations.map((rec) => (
+                        <motion.div
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          key={rec.id}
+                          className={`p-4 rounded-2xl border ${rec.color} transition-all hover:shadow-sm`}
+                        >
+                          <div className="flex justify-between items-center mb-1.5">
+                            <h5 className="font-bold text-xs">{rec.title}</h5>
+                            <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-white/80 border border-current">
+                              {rec.tag}
+                            </span>
+                          </div>
+                          <p className="text-xs font-medium leading-relaxed">{rec.desc}</p>
+                        </motion.div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ) : (
                 /* Interactive Chat Tab */

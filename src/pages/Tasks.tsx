@@ -447,30 +447,32 @@ export default function Tasks() {
           Upcoming Deadlines
         </h3>
 
-        <div className="space-y-3">
-          {[
-            { date: 'May 22', title: 'Finalize Q3 Marketing Deck', priority: 'High', status: 'In Progress', statusColor: 'text-orange-500' },
-            { date: 'May 24', title: 'Approve Budget Request', priority: 'High', status: 'To Do', statusColor: 'text-[#7B3FF2]' },
-            { date: 'May 25', title: 'Research New CRM Tools', priority: 'Low', status: 'In Progress', statusColor: 'text-orange-500' }
-          ].map((item, idx) => (
-            <div key={idx} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0 text-xs">
-              <div className="flex items-center gap-4">
-                <span className="text-gray-400 font-medium w-16">{item.date}</span>
-                <span className="text-gray-300">•</span>
-                <span className="font-bold text-gray-900">{item.title}</span>
-                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
-                  item.priority === 'High' ? 'bg-red-50 text-red-600 border-red-100' : 'bg-purple-50 text-purple-600 border-purple-100'
-                }`}>
-                  {item.priority} Priority
+        {tasks.filter(t => t.status !== 'Completed').length === 0 ? (
+          <div className="text-center py-6 text-xs text-gray-400 font-medium">
+            No upcoming deadlines scheduled. Add a task with a due date to track deadlines.
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {tasks.filter(t => t.status !== 'Completed').slice(0, 5).map((item, idx) => (
+              <div key={item.id || idx} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0 text-xs">
+                <div className="flex items-center gap-4">
+                  <span className="text-gray-400 font-medium w-24">{item.dueDate || 'No Date'}</span>
+                  <span className="text-gray-300">•</span>
+                  <span className="font-bold text-gray-900">{item.title}</span>
+                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
+                    item.priority === 'High' ? 'bg-red-50 text-red-600 border-red-100' : 'bg-purple-50 text-purple-600 border-purple-100'
+                  }`}>
+                    {item.priority} Priority
+                  </span>
+                </div>
+
+                <span className={`font-semibold ${item.status === 'Completed' ? 'text-green-600' : item.status === 'In Progress' ? 'text-orange-500' : 'text-[#7B3FF2]'}`}>
+                  {item.status}
                 </span>
               </div>
-
-              <span className={`font-semibold ${item.statusColor}`}>
-                {item.status}
-              </span>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* 6. CREATE / EDIT TASK MODAL */}
