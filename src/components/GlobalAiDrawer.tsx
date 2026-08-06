@@ -1,11 +1,18 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Sparkles, X, Send, Mic, MicOff, Lightbulb, Clock, CheckCircle2, 
   AlertCircle, ArrowRight, Zap, RefreshCw, Bot, MessageSquare
 } from 'lucide-react';
 import { chatApi } from '../lib/api';
-import { hasUserData, generateUserRecommendations } from '../lib/userData';
+import { 
+  hasUserData, 
+  generateUserRecommendations,
+  getUserEvents,
+  getUserTasks,
+  getUserNotes,
+  getUserEmails
+} from '../lib/userData';
 
 interface Message {
   id: number;
@@ -27,9 +34,20 @@ export default function GlobalAiDrawer({ isOpen, onClose }: { isOpen: boolean; o
   const [isTyping, setIsTyping] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [activeTab, setActiveTab] = useState<'chat' | 'recommendations'>('recommendations');
+  const [recs, setRecs] = useState(() => hasUserData() ? generateUserRecommendations() : []);
 
-  const userHasData = hasUserData();
-  const recommendations = userHasData ? generateUserRecommendations() : [];
+  const refreshRecs = useCallback(() => {
+    setRecs(hasUserData() ? generateUserRecommendations() : []);
+  }, []);
+
+  useEffect(() => {
+    if (isOpen) refreshRecs();
+    window.addEventListener('storage', refreshRecs);
+    return () => window.removeEventListener('storage', refreshRecs);
+  }, [isOpen, refreshRecs]);
+
+  const userHasData = recs.length > 0 || hasUserData();
+  const recommendations = recs;
 
   const suggestedPrompts = [
     "Analyze my day",
@@ -60,32 +78,49 @@ export default function GlobalAiDrawer({ isOpen, onClose }: { isOpen: boolean; o
       content: m.text,
     }));
 
-    // Call the workflow agent
-    const res = await chatApi.sendMessage(text, history);
+    // Build full user data context string for local AI model
+    const events = getUserEvents();
+    const tasks = getUserTasks();
+    const notes = getUserNotes();
+    const emails = getUserEmails();
 
-    let responseText: string;
+    const contextParts = [
+      `Planner Events (${events.length}): ${events.map(e => `"${e.title}" at ${e.startTime} (${e.category})`).join('; ') || 'None'}`,
+      `Tasks (${tasks.length}): ${tasks.map(t => `"${t.title}" [${t.priority} priority, status: ${t.status}]`).join('; ') || 'None'}`,
+      `Notes (${notes.length}): ${notes.map(n => `"${n.title}"`).join('; ') || 'None'}`,
+      `Emails (${emails.length}): ${emails.filter(e => e.unread).length} unread`
+    ];
+    const userContext = contextParts.join('\n');
 
-    if (res.underConstruction || !res.success) {
-      // Fallback local responses while webhook is under construction
-      responseText = "I've analyzed your schedule! You have 3 high-priority tasks remaining today. Would you like me to block 2 hours for deep work?";
-      if (text.toLowerCase().includes('email')) {
-        responseText = "You have 3 unread emails. Sarah requested updates on the Q3 roadmap by 5 PM. I can help generate a reply!";
-      } else if (text.toLowerCase().includes('task') || text.toLowerCase().includes('prioritize')) {
-        responseText = "I've automatically prioritized your tasks: 1. Finalize Q3 Deck, 2. Budget Approval, 3. Review Candidates. Overdue tasks have been carried forward.";
-      }
-      if (res.underConstruction) {
-        responseText += '\n\n🚧 (Workflow under construction — this is a demo response)';
+    // Call the local AI model service via /api/chat
+    const res = await chatApi.sendMessage(text, history, userContext);
+
+    let responseText: string = "I've processed your request. Check your dashboard for updates!";
+
+    if (!res.success || !res.data) {
+      if (events.length > 0 || tasks.length > 0) {
+        responseText = `I've analyzed your schedule! You have ${events.length} event(s) in your planner and ${tasks.length} task(s). First priority item: "${tasks[0]?.title || events[0]?.title || 'Daily Focus'}".`;
+      } else {
+        responseText = "I'm ready to help you plan your day! Add your events or tasks in the planner and I will provide intelligent recommendations.";
       }
     } else {
-      const payload = res.data as { reply?: string; text?: string; output?: string; message?: string };
-      responseText = payload?.reply || payload?.text || payload?.output || payload?.message
-        || "I've processed your request. Check your dashboard for updates!";
+      const payload = res.data as Record<string, unknown>;
+      const rawReply = payload?.reply || payload?.text || payload?.output || payload?.message;
+      if (typeof rawReply === 'string') {
+        responseText = rawReply;
+      } else if (rawReply && typeof rawReply === 'object') {
+        responseText = JSON.stringify(rawReply, null, 2);
+      } else if (typeof res.data === 'string') {
+        responseText = res.data;
+      } else {
+        responseText = JSON.stringify(res.data);
+      }
     }
 
     const aiMsg: Message = {
       id: Date.now() + 1,
       sender: 'ai',
-      text: responseText,
+      text: String(responseText),
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
     setMessages(prev => [...prev, aiMsg]);
@@ -120,6 +155,7 @@ export default function GlobalAiDrawer({ isOpen, onClose }: { isOpen: boolean; o
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
+            onClick={(e) => e.stopPropagation()}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
             className="fixed top-0 right-0 h-full w-full max-w-md bg-white text-gray-900 z-50 shadow-2xl flex flex-col border-l border-gray-100 font-sans"
           >

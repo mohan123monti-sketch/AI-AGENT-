@@ -120,11 +120,13 @@ export const chatApi = {
   sendMessage: (
     message: string,
     history: ChatMessage[] = [],
+    context?: string,
     sessionId?: string
   ) =>
-    post<{ reply: string; raw?: unknown }>('/chat', {
+    post<{ reply: string; model?: string; raw?: unknown }>('/chat', {
       message,
       history,
+      context,
       sessionId,
     }),
 };

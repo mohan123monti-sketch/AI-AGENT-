@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { plannerApi } from '../lib/api';
 
-export type EventCategory = 'Focus Block' | 'Meeting' | 'Carried Forward' | 'Break' | 'Task';
+export type EventCategory = 'Focus Block' | 'Meeting' | 'Carried Forward' | 'Break' | 'Task' | 'Other';
 export type EventPriority = 'HIGH' | 'MEDIUM' | 'LOW';
 
 export interface PlannerEvent {
@@ -141,7 +141,8 @@ export default function Planner() {
     startTime: '09:00 AM',
     endTime: '10:00 AM',
     platform: 'Zoom',
-    meetingLink: ''
+    meetingLink: '',
+    customCategory: ''
   });
 
   // Reminder Form State
@@ -238,6 +239,9 @@ export default function Planner() {
       tags = ['TASK', 'CARRIED FORWARD', eventForm.priority];
     } else if (eventForm.category === 'Break') {
       tags = ['BREAK', eventForm.priority];
+    } else if (eventForm.category === 'Other') {
+      const customTag = (eventForm.customCategory.trim() || 'OTHER').toUpperCase();
+      tags = [customTag, eventForm.priority];
     } else {
       tags = ['FOCUS', eventForm.priority];
     }
@@ -353,7 +357,7 @@ export default function Planner() {
 
           {/* View Mode Toggle Pill */}
           <div className="flex items-center bg-gray-100/80 p-1 rounded-full text-xs font-semibold text-gray-500">
-            {(['Day', 'Week', 'Month', 'Agenda'] as const).map(mode => (
+            {(['Day', 'Month'] as const).map(mode => (
               <button
                 key={mode}
                 onClick={() => setViewMode(mode)}
@@ -713,6 +717,7 @@ export default function Planner() {
                       <option value="Carried Forward">Carried Forward</option>
                       <option value="Break">Break</option>
                       <option value="Task">Task</option>
+                      <option value="Other">Other</option>
                     </select>
                   </div>
 
@@ -729,6 +734,19 @@ export default function Planner() {
                     </select>
                   </div>
                 </div>
+
+                {eventForm.category === 'Other' && (
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">Custom Category Name *</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Design, Research, Marketing, Operations..."
+                      value={eventForm.customCategory}
+                      onChange={(e) => setEventForm({ ...eventForm, customCategory: e.target.value })}
+                      className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-800 focus:outline-none focus:border-[#7B3FF2]"
+                    />
+                  </div>
+                )}
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>

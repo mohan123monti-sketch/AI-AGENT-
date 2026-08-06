@@ -27,6 +27,9 @@ export interface PlannerEvent {
   endTime?: string;
   category: string;
   priority?: string;
+  platform?: string;
+  tags?: string[];
+  meetingLink?: string;
   completed: boolean;
   isCarriedForward?: boolean;
 }
@@ -225,16 +228,37 @@ export function generateUserRecommendations(): RecommendationItem[] {
     });
   }
 
-  // Today's schedule events
-  const todayStr = new Date().toISOString().split('T')[0];
-  const todayEvents = events.filter(e => e.date === todayStr || !e.date);
-  if (todayEvents.length > 0) {
+  // Planner Schedule Events (Meetings, Focus Blocks, Custom)
+  if (events.length > 0) {
+    const meetings = events.filter(e => e.category === 'Meeting' || e.platform || (e.tags && e.tags.includes('MEETING')));
+    if (meetings.length > 0) {
+      const firstMeeting = meetings[0];
+      recs.push({
+        id: `meeting-${firstMeeting.id || 'rec'}`,
+        title: `Upcoming Meeting: ${firstMeeting.title}`,
+        desc: `Scheduled for ${firstMeeting.startTime || 'today'}${firstMeeting.platform ? ` on ${firstMeeting.platform}` : ''}. Click to join or view details.`,
+        tag: 'Meeting',
+        color: 'bg-blue-50 text-blue-700 border-blue-200'
+      });
+    }
+
+    const focusBlocks = events.filter(e => e.category === 'Focus Block' || (e.tags && e.tags.includes('FOCUS')));
+    if (focusBlocks.length > 0) {
+      recs.push({
+        id: 'focus-blocks',
+        title: 'Deep Focus Block Scheduled',
+        desc: `You have ${focusBlocks.length} focus session${focusBlocks.length > 1 ? 's' : ''} set up to maximize your productivity.`,
+        tag: 'Focus',
+        color: 'bg-purple-50 text-purple-700 border-purple-200'
+      });
+    }
+
     recs.push({
-      id: 'today-schedule',
-      title: 'Today\'s Schedule',
-      desc: `You have ${todayEvents.length} event${todayEvents.length > 1 ? 's' : ''} scheduled for today.`,
+      id: 'planner-total',
+      title: 'Planner Overview',
+      desc: `You have ${events.length} active schedule event${events.length > 1 ? 's' : ''} in your AI Daily Planner.`,
       tag: 'Calendar',
-      color: 'bg-blue-50 text-blue-700 border-blue-200'
+      color: 'bg-indigo-50 text-indigo-700 border-indigo-200'
     });
   }
 

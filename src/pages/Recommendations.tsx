@@ -1,11 +1,23 @@
+import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Lightbulb, Sparkles, Plus, CheckCircle2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { hasUserData, generateUserRecommendations } from '../lib/userData';
 
 export default function Recommendations() {
-  const userHasData = hasUserData();
-  const recommendations = userHasData ? generateUserRecommendations() : [];
+  const [recs, setRecs] = useState(() => hasUserData() ? generateUserRecommendations() : []);
+
+  useEffect(() => {
+    const handleSync = () => {
+      setRecs(hasUserData() ? generateUserRecommendations() : []);
+    };
+    handleSync();
+    window.addEventListener('storage', handleSync);
+    return () => window.removeEventListener('storage', handleSync);
+  }, []);
+
+  const userHasData = recs.length > 0;
+  const recommendations = recs;
 
   return (
     <div className="max-w-4xl mx-auto h-full pb-12">
