@@ -10,7 +10,7 @@ export interface User {
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
-  login: (email: string, name?: string) => void;
+  login: (email: string, name?: string, avatar?: string) => void;
   register: (name: string, email: string) => void;
   logout: () => void;
 }
@@ -37,14 +37,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   }, [user]);
 
-  const login = (email: string, name?: string) => {
+  const login = (email: string, name?: string, avatar?: string) => {
     const userName = name || email.split('@')[0].replace('.', ' ');
     const formattedName = userName.charAt(0).toUpperCase() + userName.slice(1);
     const newUser: User = {
       id: `usr_${Date.now()}`,
       name: formattedName,
       email,
-      avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(formattedName)}`,
+      avatar: avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(formattedName)}`,
     };
     setUser(newUser);
   };
