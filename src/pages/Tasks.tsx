@@ -31,17 +31,32 @@ export interface TaskItem {
   assigneeAvatar?: string;
 }
 
+const TASKS_STORAGE_KEY = 'planai_user_tasks';
+
 export default function Tasks() {
-  const [tasks, setTasks] = useState<TaskItem[]>([]);
+  const [tasks, setTasks] = useState<TaskItem[]>(() => {
+    try {
+      const saved = localStorage.getItem(TASKS_STORAGE_KEY);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
   const [activeTab, setActiveTab] = useState<string>('today');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
 
-  // Load tasks from the live workflow on mount
+  // Persist tasks locally and notify listeners
+  useEffect(() => {
+    localStorage.setItem(TASKS_STORAGE_KEY, JSON.stringify(tasks));
+    window.dispatchEvent(new Event('storage'));
+  }, [tasks]);
+
+  // Load tasks from backend workflow if available
   useEffect(() => {
     const loadTasks = async () => {
       const res = await tasksApi.fetchTasks();
-      if (res.success && Array.isArray(res.data)) {
+      if (res.success && Array.isArray(res.data) && res.data.length > 0) {
         setTasks(res.data as TaskItem[]);
       }
     };
