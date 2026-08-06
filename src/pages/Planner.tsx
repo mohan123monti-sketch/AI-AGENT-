@@ -21,6 +21,7 @@ export interface PlannerEvent {
   priority?: EventPriority;
   tags?: string[];
   platform?: string; // e.g. "Zoom"
+  meetingLink?: string;
   completed: boolean;
   isCarriedForward?: boolean;
 }
@@ -106,6 +107,8 @@ export default function Planner() {
   // Modals state
   const [isAddEventModalOpen, setIsAddEventModalOpen] = useState(false);
   const [isScheduleMeetingModalOpen, setIsScheduleMeetingModalOpen] = useState(false);
+  const [isMeetingTypeChoiceModalOpen, setIsMeetingTypeChoiceModalOpen] = useState(false);
+  const [meetingTypeChoice, setMeetingTypeChoice] = useState<'zoom' | 'other' | null>(null);
   const [isAddReminderModalOpen, setIsAddReminderModalOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<PlannerEvent | null>(null);
 
@@ -166,7 +169,8 @@ export default function Planner() {
     priority: 'HIGH' as EventPriority,
     startTime: '09:00 AM',
     endTime: '10:00 AM',
-    platform: 'Zoom'
+    platform: 'Zoom',
+    meetingLink: ''
   });
 
   // Reminder Form State
@@ -213,13 +217,28 @@ export default function Planner() {
     setEditingEvent(null);
     setEventForm({
       title: '',
-      description: 'Sprint planning and architecture sync with dev team.',
+      description: '',
       category: 'Meeting',
       priority: 'HIGH',
       startTime: '02:00 PM',
       endTime: '03:00 PM',
-      platform: 'Zoom'
+      platform: 'Zoom',
+      meetingLink: ''
     });
+    setIsMeetingTypeChoiceModalOpen(true);
+  };
+
+  const handleSelectZoomMeeting = () => {
+    setMeetingTypeChoice('zoom');
+    setEventForm(prev => ({ ...prev, platform: 'Zoom', meetingLink: '' }));
+    setIsMeetingTypeChoiceModalOpen(false);
+    setIsScheduleMeetingModalOpen(true);
+  };
+
+  const handleSelectOtherMeeting = () => {
+    setMeetingTypeChoice('other');
+    setEventForm(prev => ({ ...prev, platform: 'Other', meetingLink: '' }));
+    setIsMeetingTypeChoiceModalOpen(false);
     setIsScheduleMeetingModalOpen(true);
   };
 
@@ -232,7 +251,8 @@ export default function Planner() {
       priority: evt.priority || 'HIGH',
       startTime: evt.startTime,
       endTime: evt.endTime || '11:00 AM',
-      platform: evt.platform || 'Zoom'
+      platform: evt.platform || 'Zoom',
+      meetingLink: evt.meetingLink || ''
     });
     setIsAddEventModalOpen(true);
   };
@@ -242,7 +262,7 @@ export default function Planner() {
 
     let tags: string[] = [];
     if (eventForm.category === 'Meeting') {
-      tags = ['MEETING', eventForm.platform, eventForm.priority];
+      tags = ['MEETING', eventForm.platform || 'Zoom', eventForm.priority];
     } else if (eventForm.category === 'Carried Forward') {
       tags = ['TASK', 'CARRIED FORWARD', eventForm.priority];
     } else if (eventForm.category === 'Break') {
@@ -262,6 +282,7 @@ export default function Planner() {
         startTime: eventForm.startTime,
         endTime: eventForm.endTime,
         platform: eventForm.platform,
+        meetingLink: eventForm.meetingLink,
         tags,
       };
       setEvents(prev => prev.map(e => e.id === editingEvent.id ? eventToSave : e));
@@ -277,11 +298,12 @@ export default function Planner() {
         category: eventForm.category,
         priority: eventForm.priority,
         platform: eventForm.platform,
+        meetingLink: eventForm.meetingLink,
         tags,
         completed: false
       };
       setEvents(prev => [...prev, eventToSave]);
-      showToast(`Created event "${eventForm.title}"`);
+      showToast(`Created meeting "${eventForm.title}"`);
     }
 
     setIsAddEventModalOpen(false);
@@ -604,6 +626,18 @@ export default function Planner() {
 
                     {/* Right Actions / Info */}
                     <div className="flex items-center gap-2 shrink-0">
+                      {evt.category === 'Meeting' && (
+                        <a
+                          href={evt.meetingLink || 'https://zoom.us/join'}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-3 py-1.5 rounded-xl text-xs font-bold bg-[#7B3FF2] hover:bg-[#5A2DD8] text-white shadow-xs transition-all flex items-center gap-1.5 cursor-pointer no-underline"
+                        >
+                          <Video className="w-3.5 h-3.5 text-white" />
+                          Join Meeting
+                        </a>
+                      )}
+
                       {evt.endTime && !evt.completed && (
                         <span className="text-xs font-semibold text-gray-400 mr-2">
                           ⏰ {evt.startTime} - {evt.endTime}
@@ -771,7 +805,63 @@ export default function Planner() {
         )}
       </AnimatePresence>
 
-      {/* SCHEDULE MEETING MODAL */}
+      {/* STEP 1: MEETING TYPE CHOICE MODAL */}
+      <AnimatePresence>
+        {isMeetingTypeChoiceModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-2xl border border-gray-200 shadow-2xl w-full max-w-md p-6 space-y-5"
+            >
+              <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+                <h3 className="font-heading font-bold text-base text-gray-900 flex items-center gap-2">
+                  <Video className="w-5 h-5 text-[#7B3FF2]" />
+                  Schedule Meeting
+                </h3>
+                <button onClick={() => setIsMeetingTypeChoiceModalOpen(false)} className="text-gray-400 hover:text-gray-700 p-1">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <p className="text-xs text-gray-500 font-medium">Choose how you would like to host your meeting:</p>
+
+              <div className="grid grid-cols-1 gap-3">
+                <button
+                  type="button"
+                  onClick={handleSelectZoomMeeting}
+                  className="p-4 rounded-xl border border-gray-200 hover:border-[#7B3FF2] hover:bg-[#F3EEFF]/40 transition-all text-left flex items-center gap-4 group cursor-pointer"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold shrink-0 group-hover:bg-[#7B3FF2] group-hover:text-white transition-colors">
+                    <Video className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-sm text-gray-900 group-hover:text-[#7B3FF2] transition-colors">Meeting with Zoom</h4>
+                    <p className="text-xs text-gray-500">Fast Zoom video meeting with automated setup</p>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleSelectOtherMeeting}
+                  className="p-4 rounded-xl border border-gray-200 hover:border-[#7B3FF2] hover:bg-[#F3EEFF]/40 transition-all text-left flex items-center gap-4 group cursor-pointer"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-purple-50 text-[#7B3FF2] flex items-center justify-center font-bold shrink-0 group-hover:bg-[#7B3FF2] group-hover:text-white transition-colors">
+                    <Sparkles className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-sm text-gray-900 group-hover:text-[#7B3FF2] transition-colors">Meeting with Other</h4>
+                    <p className="text-xs text-gray-500">Custom meeting with meeting link</p>
+                  </div>
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* STEP 2: SCHEDULE MEETING MODAL */}
       <AnimatePresence>
         {isScheduleMeetingModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
@@ -784,7 +874,7 @@ export default function Planner() {
               <div className="flex items-center justify-between border-b border-gray-100 pb-3">
                 <h3 className="font-heading font-bold text-base text-gray-900 flex items-center gap-2">
                   <Video className="w-4 h-4 text-[#7B3FF2]" />
-                  Schedule Video Meeting
+                  {meetingTypeChoice === 'zoom' ? 'Schedule Zoom Meeting' : 'Schedule Meeting (Other)'}
                 </h3>
                 <button onClick={() => setIsScheduleMeetingModalOpen(false)} className="text-gray-400 hover:text-gray-700 p-1">
                   <X className="w-5 h-5" />
@@ -805,19 +895,6 @@ export default function Planner() {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Platform</label>
-                    <select
-                      value={eventForm.platform}
-                      onChange={(e) => setEventForm({ ...eventForm, platform: e.target.value })}
-                      className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-800 focus:outline-none focus:border-[#7B3FF2]"
-                    >
-                      <option value="Zoom">Zoom Video</option>
-                      <option value="Google Meet">Google Meet</option>
-                      <option value="MS Teams">Microsoft Teams</option>
-                    </select>
-                  </div>
-
-                  <div>
                     <label className="block text-xs font-bold text-gray-700 mb-1">Start Time</label>
                     <input
                       type="text"
@@ -827,17 +904,43 @@ export default function Planner() {
                       className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-800 focus:outline-none focus:border-[#7B3FF2]"
                     />
                   </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">End Time</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. 03:00 PM"
+                      value={eventForm.endTime}
+                      onChange={(e) => setEventForm({ ...eventForm, endTime: e.target.value })}
+                      className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-800 focus:outline-none focus:border-[#7B3FF2]"
+                    />
+                  </div>
                 </div>
 
+                {meetingTypeChoice === 'other' && (
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">Meeting Link *</label>
+                    <input
+                      type="url"
+                      placeholder="e.g. https://meet.google.com/abc-defg-hij"
+                      value={eventForm.meetingLink}
+                      onChange={(e) => setEventForm({ ...eventForm, meetingLink: e.target.value })}
+                      className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-800 focus:outline-none focus:border-[#7B3FF2]"
+                    />
+                  </div>
+                )}
+
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Agenda & Notes</label>
-                  <textarea
-                    rows={2}
-                    placeholder="Meeting topics..."
-                    value={eventForm.description}
-                    onChange={(e) => setEventForm({ ...eventForm, description: e.target.value })}
+                  <label className="block text-xs font-bold text-gray-700 mb-1">Priority</label>
+                  <select
+                    value={eventForm.priority}
+                    onChange={(e) => setEventForm({ ...eventForm, priority: e.target.value as EventPriority })}
                     className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-800 focus:outline-none focus:border-[#7B3FF2]"
-                  />
+                  >
+                    <option value="HIGH">High Priority</option>
+                    <option value="MEDIUM">Medium Priority</option>
+                    <option value="LOW">Low Priority</option>
+                  </select>
                 </div>
               </div>
 
